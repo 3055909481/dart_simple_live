@@ -44,6 +44,12 @@ class Sites {
       name: "快手直播",
       liveSite: KuaishouSite(),
     ),
+    Constant.kStripchat: Site(
+      id: Constant.kStripchat,
+      logo: "assets/images/stripchat.png",
+      name: "Stripchat",
+      liveSite: StripchatSite(),
+    ),
   };
 
   static List<Site> get supportSites {

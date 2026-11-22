@@ -128,6 +128,10 @@ Future<List> parseUrl(String url) async {
       return [HuyaSite(), parsed.roomId];
     case LiveUrlParser.siteDouyin:
       return [DouyinSite(), parsed.roomId];
+    case LiveUrlParser.siteKuaishou:
+      return [KuaishouSite(), parsed.roomId];
+    case LiveUrlParser.siteStripchat:
+      return [StripchatSite(), parsed.roomId];
   }
   throw Exception("链接解析失败");
 }

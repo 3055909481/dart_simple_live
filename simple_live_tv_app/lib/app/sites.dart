@@ -39,6 +39,13 @@ class Sites {
       liveSite: KuaishouSite(),
       index: 4,
     ),
+    Constant.kStripchat: Site(
+      id: Constant.kStripchat,
+      logo: "assets/images/stripchat.png",
+      name: "Stripchat",
+      liveSite: StripchatSite(),
+      index: 5,
+    ),
   };
 
   static List<Site> get supportSites {

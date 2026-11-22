@@ -4092,6 +4092,10 @@ class LiveRoomController extends PlayerController
       naviteUrl =
           "douyulink://?type=90001&schemeUrl=douyuapp%3A%2F%2Froom%3FliveType%3D0%26rid%3D${detail.value?.roomId}";
       webUrl = "https://www.douyu.com/${detail.value?.roomId}";
+    } else if (site.id == Constant.kStripchat) {
+      // Stripchat 无对应客户端跳转 scheme，直接用浏览器打开房间页。
+      naviteUrl = detail.value?.url ?? "https://stripchat.com/${detail.value?.roomId}";
+      webUrl = naviteUrl;
     }
     try {
       await launchUrlString(naviteUrl, mode: LaunchMode.externalApplication);

@@ -29,6 +29,7 @@ class LiveUrlParser {
   static const String siteHuya = "huya";
   static const String siteDouyin = "douyin";
   static const String siteKuaishou = "kuaishou";
+  static const String siteStripchat = "stripchat";
 
   static final RegExp _roomIdPattern = RegExp(r'^[A-Za-z0-9._-]+$');
   static final RegExp _numericRoomIdPattern = RegExp(r'^\d+$');
@@ -115,6 +116,29 @@ class LiveUrlParser {
         return null;
       }
       return _numericRoom(siteDouyin, segments[reflowIndex + 1], uri);
+    }
+
+    // Stripchat 房间路径为 https://stripchat.com/<username>
+    if (host == "stripchat.com" || host.endsWith(".stripchat.com")) {
+      if (segments.isEmpty) {
+        return null;
+      }
+      // 排除静态资源或营销路径，只把第一段当作主播用户名。
+      const reserved = {
+        "static",
+        "assets",
+        "api",
+        "signup",
+        "login",
+        "about",
+        "help",
+        "categories",
+        "search",
+      };
+      if (reserved.contains(segments.first.toLowerCase())) {
+        return null;
+      }
+      return _room(siteStripchat, segments.first, uri);
     }
 
     return null;

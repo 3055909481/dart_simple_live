@@ -114,6 +114,8 @@ https://webcast.amemv.com/webcast/reflow/xxxxx
 https://live.kuaishou.com/u/xxxxx
 https://v.kuaishou.com/xxxxx
 https://live.m.chenzhongtech.com/fw/live/xxxxx
+Stripchat：
+https://stripchat.com/xxxxx
 ''', style: TextStyle(color: Colors.grey)),
           ),
         ],
