@@ -28,9 +28,9 @@ on:
         type: boolean
         default: false
       release_tag:
-        description: "发布到的 Release tag（publish_release 开启时有效）"
+        description: "发布到的 Release tag（留空则读取仓库 version.json 的 tag，推荐留空）"
         required: false
-        default: "v1.0.0"
+        default: ""
   push:
     tags:
       - "dev_v*"
@@ -370,6 +370,24 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
+      # 版本号唯一来源：version.json。发新版只改它 + pubspec version。
+      - name: Resolve release info from version.json
+        id: rel
+        shell: bash
+        run: |
+          tag="$(python3 -c 'import json;print(json.load(open("version.json"))["tag"])')"
+          ver="$(python3 -c 'import json;print(json.load(open("version.json"))["version"])')"
+          notes="$(python3 -c 'import json;print(json.load(open("version.json")).get("notes",""))')"
+          input_tag="${{ inputs.release_tag }}"
+          if [[ -n "$input_tag" ]]; then tag="$input_tag"; fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+          # 写入多行 notes 到文件，供 action 的 body_path 使用
+          printf '%s\n' "$notes" > release-notes.md
+          echo "resolved tag=$tag version=$ver"
+
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -382,8 +400,9 @@ jobs:
       - name: Publish to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.release_tag }}
-          name: ${{ inputs.release_tag }}
+          tag_name: ${{ steps.rel.outputs.tag }}
+          name: ${{ steps.rel.outputs.tag }}
+          body_path: release-notes.md
           token: ${{ github.token }}
           fail_on_unmatched_files: false
           overwrite_files: true
@@ -396,4 +415,4 @@ jobs:
             release-artifacts/**/*.zip
             release-artifacts/**/*.msix
 
-      - run: echo "Release published to ${{ inputs.release_tag }}."
+      - run: echo "Release published to ${{ steps.rel.outputs.tag }}."
