@@ -105,7 +105,7 @@ Future<void> _checkUpdateOnStartup() async {
       }
     });
   } catch (e) {
-    Log.e("启动检查更新失败: $e");
+    Log.e("启动检查更新失败: $e", StackTrace.current);
   }
 }
 

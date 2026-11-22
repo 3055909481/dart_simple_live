@@ -118,7 +118,7 @@ class UpdateDialog {
                           Get.back();
                         }
                       } catch (e) {
-                        Log.e("更新失败: $e");
+                        Log.e("更新失败: $e", StackTrace.current);
                         Get.snackbar("更新失败", "$e",
                             snackPosition: SnackPosition.BOTTOM);
                       }

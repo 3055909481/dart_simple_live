@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -100,7 +101,7 @@ class UpdateService extends GetxService {
     } catch (e) {
       error.value = e.toString();
       if (!silent) {
-        Log.e("检查更新失败: $e");
+        Log.e("检查更新失败: $e", StackTrace.current);
       }
       return null;
     } finally {
@@ -197,11 +198,10 @@ class UpdateService extends GetxService {
         mode: ProcessStartMode.detached,
       );
 
-      // 退出当前应用，让脚本完成替换并重启
+      // 退出当前应用，让脚本完成替换并重启（exit 不会返回）
       exit(0);
-      return true;
     } catch (e) {
-      Log.e("Windows 自动更新失败: $e");
+      Log.e("Windows 自动更新失败: $e", StackTrace.current);
       return false;
     } finally {
       downloading.value = false;
