@@ -29,7 +29,7 @@ class StripchatSite implements LiveSite {
 
   /// primaryTag 是具有实际意义的分类维度。
   /// 站点 tag 接口未开放，这里按公开前端已知的取值内置。
-  static const List<LiveSubCategory> _primaryTags = [
+  static final List<LiveSubCategory> _primaryTags = [
     LiveSubCategory(id: "girls", name: "女主播", parentId: "recommend"),
     LiveSubCategory(id: "couples", name: "情侣", parentId: "recommend"),
   ];
@@ -502,6 +502,24 @@ class StripchatSite implements LiveSite {
       return false;
     }
     return model["isLive"] == true || model["isOnline"] == true;
+  }
+
+  @override
+  Future<List<LiveSuperChatMessage>> getSuperChatMessage({
+    required String roomId,
+    LiveRoomDetail? detail,
+  }) {
+    // 该站不提供 SC 查询接口。
+    return Future.value(<LiveSuperChatMessage>[]);
+  }
+
+  @override
+  Future<List<LiveContributionRankItem>> getContributionRank({
+    required String roomId,
+    LiveRoomDetail? detail,
+  }) {
+    // 该站不提供贡献榜查询接口。
+    return Future.value(<LiveContributionRankItem>[]);
   }
 
   @override
