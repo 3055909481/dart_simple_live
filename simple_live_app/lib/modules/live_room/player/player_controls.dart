@@ -690,11 +690,7 @@ Widget _buildFullBottomBar(
                 if (context == null) {
                   return;
                 }
-                // 静音时点击直接恢复音量，否则展开音量滑条。
-                if (controller.mutedState.value) {
-                  controller.toggleMute();
-                  return;
-                }
+                // 静音/恢复统一在滑条浮层最左侧的按钮操作。
                 controller.showVolumeSlider(
                   context,
                   keepAlive: true,
@@ -895,11 +891,7 @@ Widget _buildNormalBottomBar(
                     if (context == null) {
                       return;
                     }
-                    // 静音时点击直接恢复音量，否则展开音量滑条。
-                    if (controller.mutedState.value) {
-                      controller.toggleMute();
-                      return;
-                    }
+                    // 静音/恢复统一在滑条浮层最左侧的按钮操作。
                     controller.showVolumeSlider(
                       context,
                       keepAlive: true,

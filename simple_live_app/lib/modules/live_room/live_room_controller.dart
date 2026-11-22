@@ -3117,14 +3117,53 @@ class LiveRoomController extends PlayerController
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Slider(
-                        min: 0,
-                        max: maxVolume,
-                        value: effectiveVolume.value.clamp(0.0, maxVolume),
-                        onChangeStart: (_) => _cancelVolumeSliderDismiss(),
-                        onChanged: (newValue) {
-                          setSessionPlayerVolume(newValue, persist: true);
-                        },
+                      Row(
+                        children: [
+                          // 静音按钮放最左边：一键静音/恢复，保持原音量值不变。
+                          IconButton(
+                            onPressed: () {
+                              _cancelVolumeSliderDismiss();
+                              toggleMute();
+                            },
+                            icon: Obx(
+                              () => Icon(
+                                mutedState.value
+                                    ? Icons.volume_off
+                                    : Icons.volume_up,
+                                size: 20,
+                                color: mutedState.value
+                                    ? Theme.of(context).colorScheme.error
+                                    : Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.color,
+                              ),
+                            ),
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                            tooltip: mutedState.value ? "取消静音" : "静音",
+                          ),
+                          Expanded(
+                            child: Slider(
+                              min: 0,
+                              max: maxVolume,
+                              value: effectiveVolume.value.clamp(0.0, maxVolume),
+                              onChangeStart: (_) => _cancelVolumeSliderDismiss(),
+                              onChanged: (newValue) {
+                                // setSessionPlayerVolume 内部会处理静音状态：
+                                // 目标值 > 0 时自动取消静音。
+                                setSessionPlayerVolume(
+                                  newValue,
+                                  persist: true,
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
