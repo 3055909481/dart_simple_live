@@ -103,3 +103,7 @@ test_*.m3u
 # 本地构建产物（发布物不入库）
 build_output/
 dist/
+
+# 临时研究文件
+.tmp_*/
+.tmp_*
