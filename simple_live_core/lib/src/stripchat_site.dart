@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/common/platform_identity.dart';
+import 'package:simple_live_core/src/common/stripchat_mouflon.dart';
+import 'package:simple_live_core/src/common/stripchat_proxy.dart';
 
 /// Stripchat 站点实现。
 ///
@@ -10,14 +12,11 @@ import 'package:simple_live_core/src/common/platform_identity.dart';
 /// - 列表/分类：`GET /api/front/models?primaryTag=<tag>&limit=&offset=`
 /// - 详情：模型主页 `https://stripchat.com/<username>` 内嵌的
 ///   `window.__PRELOADED_STATE__`（该站未开放单模型 JSON 接口）
-/// - 播放：`hlsPlaylist` 字段给出的 doppiocdn HLS 直链
+/// - 播放：CDN master playlist 经本地 Mouflon 解密代理重写后播放（见 stripchat_proxy.dart）
 ///
 /// 该站接口对请求头较敏感，统一带浏览器 UA + Referer + Accept。
 class StripchatSite implements LiveSite {
   static const String _baseUrl = "https://stripchat.com";
-  static const String _hlsBase =
-      "https://edge-hls.doppiocdn.media/hls";
-  static const String _hlsPostfix = "master";
 
   static final Map<String, String> _headers = {
     "User-Agent": PlatformIdentity.stripchatUserAgent,
@@ -411,56 +410,60 @@ class StripchatSite implements LiveSite {
     required LiveRoomDetail detail,
   }) async {
     final data = detail.data;
-    if (data is! StripchatRoomData) {
+    if (data is! StripchatRoomData || data.streamName.isEmpty) {
       return const [];
     }
+
+    // 请求 CDN master playlist，解析出带 pkey 的真实变体地址。
+    // 直接拼接的 edge-hls 地址对匿名请求只会返回广告流。
+    StripchatMouflon.ensureKeysRefreshed();
+    final resolved = await _resolveRealVariant(data.streamName);
+    if (resolved == null) {
+      return const [];
+    }
+
     final qualities = <LivePlayQuality>[
       LivePlayQuality(
-        quality: "默认",
-        data: StripchatQualityData(
-          streamName: data.streamName,
-          preset: null,
-          fallbackUrl: data.hlsPlaylist,
-        ),
+        quality: "自动",
+        data: StripchatQualityData(streamUrl: resolved),
         sort: 100,
       ),
     ];
-    for (final preset in data.presets) {
-      qualities.add(
-        LivePlayQuality(
-          quality: _presetDisplayName(preset),
-          data: StripchatQualityData(
-            streamName: data.streamName,
-            preset: preset,
-            fallbackUrl: data.hlsPlaylist,
-          ),
-          sort: _presetSort(preset),
-        ),
-      );
-    }
     return qualities;
   }
 
-  String _presetDisplayName(String preset) {
-    switch (preset.toLowerCase()) {
-      case "480p":
-        return "超清 480P";
-      case "240p":
-        return "高清 240P";
-      case "160p_blurred":
-        return "流畅 160P";
-      default:
-        final match = RegExp(r'^(\d+)p').firstMatch(preset.toLowerCase());
-        return match != null ? "${match.group(1)}P" : preset;
+  /// 请求多个 CDN TLD 的 _auto.m3u8，解析出带 pkey 的真实变体 URL。
+  Future<String?> _resolveRealVariant(String modelId) async {
+    const tlds = [
+      "doppiocdn.com",
+      "doppiocdn.org",
+      "doppiocdn.net",
+      "doppiocdn.live",
+    ];
+    for (final tld in tlds) {
+      try {
+        final masterUrl =
+            "https://edge-hls.$tld/hls/$modelId/master/${modelId}_auto.m3u8";
+        final text = await HttpClient.instance.getText(
+          masterUrl,
+          header: {
+            "User-Agent": PlatformIdentity.stripchatUserAgent,
+            "Referer": "$_baseUrl/",
+          },
+        );
+        final parsed = StripchatMouflon.parseMaster(text);
+        if (parsed == null || parsed.variantUrl.isEmpty) {
+          continue;
+        }
+        return StripchatMouflon.appendPkey(
+          parsed.variantUrl,
+          parsed.pkey,
+        );
+      } catch (_) {
+        continue;
+      }
     }
-  }
-
-  int _presetSort(String preset) {
-    final match = RegExp(r'(\d+)').firstMatch(preset);
-    if (match == null) {
-      return 0;
-    }
-    return int.tryParse(match.group(1) ?? "") ?? 0;
+    return null;
   }
 
   @override
@@ -469,35 +472,13 @@ class StripchatSite implements LiveSite {
     required LivePlayQuality quality,
   }) async {
     final data = quality.data;
-    if (data is! StripchatQualityData) {
+    if (data is! StripchatQualityData || data.streamUrl.isEmpty) {
       return LivePlayUrl(urls: []);
     }
 
-    final urls = <String>[];
-    final built = buildHlsUrl(data.streamName, data.preset);
-    if (built.isNotEmpty) {
-      urls.add(built);
-    }
-    // 构造失败时回退到接口给出的原始 hlsPlaylist。
-    final fallback = data.fallbackUrl ?? "";
-    if (fallback.isNotEmpty && !urls.contains(fallback)) {
-      urls.add(fallback);
-    }
-    return LivePlayUrl(urls: urls, headers: _headers);
-  }
-
-  /// 构造 HLS 直链。
-  ///
-  /// - 有 preset：`.../hls/<stream>/master/<stream>_<preset>.m3u8`
-  /// - 无 preset：`.../hls/<stream>/master/<stream>.m3u8`
-  String buildHlsUrl(String streamName, String? preset) {
-    if (streamName.isEmpty) {
-      return "";
-    }
-    final tail = preset == null || preset.isEmpty
-        ? streamName
-        : "${streamName}_$preset";
-    return "$_hlsBase/$streamName/$_hlsPostfix/$tail.m3u8";
+    // 经过本地解密代理播放真实流。
+    final proxied = await StripchatProxy.instance.proxyUrlFor(data.streamUrl);
+    return LivePlayUrl(urls: [proxied], headers: _headers);
   }
 
   @override
@@ -659,22 +640,13 @@ class StripchatRoomData {
 
 /// 单个清晰度的播放参数。
 class StripchatQualityData {
-  final String streamName;
-  final String? preset;
-  final String? fallbackUrl;
+  /// 带 pkey 的真实变体 m3u8 地址（交给本地解密代理）。
+  final String streamUrl;
 
-  StripchatQualityData({
-    required this.streamName,
-    this.preset,
-    this.fallbackUrl,
-  });
+  StripchatQualityData({required this.streamUrl});
 
   @override
   String toString() {
-    return json.encode({
-      "streamName": streamName,
-      "preset": preset,
-      "fallbackUrl": fallbackUrl,
-    });
+    return json.encode({"streamUrl": streamUrl});
   }
 }

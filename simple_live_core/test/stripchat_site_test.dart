@@ -2,29 +2,66 @@ import 'package:simple_live_core/simple_live_core.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('StripchatSite.buildHlsUrl', () {
-    final site = StripchatSite();
-
-    test('带 preset 生成对应清晰度直链', () {
-      expect(
-        site.buildHlsUrl("83018537", "480p"),
-        "https://edge-hls.doppiocdn.media/hls/83018537/master/83018537_480p.m3u8",
+  group('StripchatMouflon 解密', () {
+    test('分片名解密（真实样本）', () {
+      // 来自 Strpch pkey=1Dzcc6OjP73LKbtI 的真实加密串
+      final pdkey = StripchatMouflon.pdkeyFor("1Dzcc6OjP73LKbtI");
+      expect(pdkey, isNotNull);
+      final decoded = StripchatMouflon.decryptSegmentName(
+        "wKmEZonCgRn8OsPxwOseXB",
+        pdkey!,
       );
+      expect(decoded, "69SNJaFI76Kdrvbt");
     });
 
-    test('无 preset 生成默认直链', () {
-      expect(
-        site.buildHlsUrl("131766698", null),
-        "https://edge-hls.doppiocdn.media/hls/131766698/master/131766698.m3u8",
-      );
-      expect(
-        site.buildHlsUrl("131766698", ""),
-        "https://edge-hls.doppiocdn.media/hls/131766698/master/131766698.m3u8",
-      );
+    test('master playlist 解析 pkey 与变体', () {
+      const master = """
+#EXTM3U
+#EXT-X-MOUFLON:PSCH:v2:1Dzcc6OjP73LKbtI
+#EXT-X-STREAM-INF:BANDWIDTH=2445414,RESOLUTION=720x960
+https://media-hls.doppiocdn.com/media/m.m3u8?playlistType=standard&amp;x=1
+""";
+      final parsed = StripchatMouflon.parseMaster(master);
+      expect(parsed, isNotNull);
+      expect(parsed!.pkey, "1Dzcc6OjP73LKbtI");
+      expect(parsed.variantUrl, contains("playlistType=standard&x=1"));
+      expect(parsed.variantUrl, isNot(contains("&amp;")));
     });
 
-    test('空 streamName 返回空串', () {
-      expect(site.buildHlsUrl("", "240p"), "");
+    test('pkey 追加到带/不带参数的 URL', () {
+      expect(
+        StripchatMouflon.appendPkey("https://x.com/a.m3u8", "pk"),
+        "https://x.com/a.m3u8?psch=v2&pkey=pk",
+      );
+      expect(
+        StripchatMouflon.appendPkey("https://x.com/a.m3u8?b=1", "pk"),
+        "https://x.com/a.m3u8?b=1&psch=v2&pkey=pk",
+      );
+      expect(StripchatMouflon.appendPkey("https://x.com/a.m3u8", ""),
+          "https://x.com/a.m3u8");
+    });
+
+    test('重写 playlist：解密分片并移除广告占位', () {
+      const playlist = """
+#EXTM3U
+#EXT-X-MOUFLON:PSCH:v2:1Dzcc6OjP73LKbtI
+#EXTINF:1.967
+#EXT-X-MOUFLON:URI:https://media-hls.doppiocdn.com/b/131766698/131766698_1015_wKmEZonCgRn8OsPxwOseXB_1795346519.mp4
+https://media-hls.doppiocdn.com/media.mp4
+#EXTINF:1.967
+#EXT-X-MOUFLON:URI:https://media-hls.doppiocdn.com/b/131766698/131766698_1016_abc_1795346521.mp4
+https://media-hls.doppiocdn.com/media.mp4
+""";
+      final result = StripchatMouflon.rewritePlaylist(playlist);
+      expect(result.decrypted, 1);
+      expect(result.text, contains("69SNJaFI76Kdrvbt"));
+      expect(result.text, isNot(contains("media.mp4")));
+      expect(result.text, isNot(contains("MOUFLON:URI")));
+    });
+
+    test('内置密钥可用', () {
+      expect(StripchatMouflon.keyCount, greaterThan(0));
+      expect(StripchatMouflon.pdkeyFor("1Dzcc6OjP73LKbtI"), isNotNull);
     });
   });
 
@@ -80,18 +117,6 @@ void main() {
         children.map((e) => e.id).toList(),
         containsAll(["girls", "couples"]),
       );
-    });
-  });
-
-  group('StripchatQualityData 序列化', () {
-    test('携带 preset 与 streamName', () {
-      final data = StripchatQualityData(
-        streamName: "83018537",
-        preset: "240p",
-        fallbackUrl: "https://example.com/fallback.m3u8",
-      );
-      expect(data.toString(), contains('"streamName":"83018537"'));
-      expect(data.toString(), contains('"preset":"240p"'));
     });
   });
 }
