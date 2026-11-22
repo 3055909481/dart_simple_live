@@ -137,56 +137,12 @@ class StripchatSite implements LiveSite {
       throw CoreError("Stripchat 分类数据解析失败");
     }
     final tagPage = state["tagPage"] as Map;
-    final models = tagPage["models"] is List ? tagPage["models"] as List : const [];
+    final models = tagPage["models"] as List? ?? const <dynamic>[];
     final items = models
         .map(_parseRoomItem)
         .whereType<LiveRoomItem>()
         .toList();
     return LiveCategoryResult(items: items, hasMore: false);
-  }
-
-  /// 从 HTML 中括号配对提取 window.__PRELOADED_STATE__ = {...}。
-  Map<String, dynamic>? _extractPreloadedState(String html) {
-    const marker = "window.__PRELOADED_STATE__";
-    final start = html.indexOf(marker);
-    if (start < 0) return null;
-    final braceStart = html.indexOf("{", start + marker.length);
-    if (braceStart < 0) return null;
-
-    var depth = 0;
-    var inString = false;
-    var escaped = false;
-    String? quote;
-    for (var i = braceStart; i < html.length; i += 1) {
-      final c = html[i];
-      if (inString) {
-        if (escaped) {
-          escaped = false;
-        } else if (c == "\\") {
-          escaped = true;
-        } else if (c == quote) {
-          inString = false;
-        }
-        continue;
-      }
-      if (c == '"' || c == "'") {
-        inString = true;
-        quote = c;
-      } else if (c == "{") {
-        depth += 1;
-      } else if (c == "}") {
-        depth -= 1;
-        if (depth == 0) {
-          try {
-            final decoded = json.decode(html.substring(braceStart, i + 1));
-            return decoded is Map<String, dynamic> ? decoded : null;
-          } catch (_) {
-            return null;
-          }
-        }
-      }
-    }
-    return null;
   }
 
   /// 统一的分页模型列表解析。
