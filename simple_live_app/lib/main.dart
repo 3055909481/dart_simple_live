@@ -42,6 +42,8 @@ import 'package:simple_live_app/services/live_subtitle_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 import 'package:simple_live_app/services/profile_backup_service.dart';
 import 'package:simple_live_app/services/sync_service.dart';
+import 'package:simple_live_app/services/update_service.dart';
+import 'package:simple_live_app/widgets/update_dialog.dart';
 import 'package:simple_live_app/widgets/status/app_loadding_widget.dart';
 import 'package:simple_live_core/simple_live_core.dart';
 import 'package:window_manager/window_manager.dart';
@@ -81,8 +83,30 @@ void main(List<String> args) async {
     systemNavigationBarColor: Colors.transparent,
   );
   SystemChrome.setSystemUIOverlayStyle(systemUiOverlayStyle);
+  // 启动后自动检查一次更新（延迟到首帧后，不阻塞启动流程）。
+  unawaited(_checkUpdateOnStartup());
   runApp(const MyApp());
   unawaited(setupDesktopWindowLifecycle());
+}
+
+/// 启动时自动检查一次更新：延迟到首帧后，避免阻塞启动与 Get.context 未就绪。
+Future<void> _checkUpdateOnStartup() async {
+  try {
+    await Future<void>.delayed(const Duration(seconds: 3));
+    final service = UpdateService.instance;
+    await service.loadSkipVersion();
+    final info = await service.check(silent: true);
+    if (info == null) return;
+    // 等一帧确保页面已挂载
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = Get.context;
+      if (ctx != null && ctx.mounted) {
+        UpdateDialog.show(ctx, info);
+      }
+    });
+  } catch (e) {
+    Log.e("启动检查更新失败: $e");
+  }
 }
 
 /// 本 fork 的独立数据目录名。
@@ -515,6 +539,9 @@ Future initServices() async {
   } else {
     Get.put(SyncService());
   }
+
+  // 更新服务（检查 GitHub Releases）
+  Get.put(UpdateService());
 
   initCoreLog();
 }

@@ -83,7 +83,11 @@ class StripchatProxy {
         return;
       }
 
-      final rewritten = StripchatMouflon.rewritePlaylist(upstream.body);
+      final lowLatency = request.uri.queryParameters["ll"] == "1";
+      final rewritten = StripchatMouflon.rewritePlaylist(
+        upstream.body,
+        lowLatency: lowLatency,
+      );
       response.statusCode = HttpStatus.ok;
       response.headers.set(
         HttpHeaders.contentTypeHeader,
@@ -137,14 +141,18 @@ class StripchatProxy {
   }
 
   /// 生成代理 URL，交给播放器请求。
-  Future<String> proxyUrlFor(String target) async {
+  Future<String> proxyUrlFor(String target, {bool lowLatency = false}) async {
     final port = await ensureStarted();
+    final query = <String, String>{"url": target};
+    if (lowLatency) {
+      query["ll"] = "1";
+    }
     final uri = Uri(
       scheme: "http",
       host: "127.0.0.1",
       port: port,
       path: "/m3u8",
-      queryParameters: {"url": target},
+      queryParameters: query,
     );
     return uri.toString();
   }

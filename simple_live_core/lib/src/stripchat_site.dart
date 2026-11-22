@@ -414,28 +414,57 @@ class StripchatSite implements LiveSite {
       return const [];
     }
 
-    // 请求 CDN master playlist，解析出带 pkey 的真实变体地址。
+    // 请求 CDN master playlist，解析出带 pkey 的所有清晰度变体。
     // 直接拼接的 edge-hls 地址对匿名请求只会返回广告流。
     StripchatMouflon.ensureKeysRefreshed();
     // 切换房间/清晰度时清空历史分片缓存，避免混入上一个流的分片。
     StripchatMouflon.clearSegmentCache();
-    final resolved = await _resolveRealVariant(data.streamName);
-    if (resolved == null) {
+    final resolved = await _resolveMaster(data.streamName);
+    if (resolved == null || resolved.variants.isEmpty) {
       return const [];
     }
 
-    final qualities = <LivePlayQuality>[
+    final qualities = <LivePlayQuality>[];
+    // 超低时延：用最高画质的变体，但代理用小窗口（低缓冲）。
+    final bestVariant = resolved.variants.first;
+    qualities.add(
       LivePlayQuality(
-        quality: "自动",
-        data: StripchatQualityData(streamUrl: resolved),
-        sort: 100,
+        quality: "超低时延",
+        data: StripchatQualityData(
+          streamUrl: StripchatMouflon.appendPkey(
+            bestVariant.url,
+            resolved.pkey,
+          ),
+          lowLatency: true,
+        ),
+        sort: 1000,
       ),
-    ];
+    );
+    // 普通清晰度：稳定大缓冲
+    for (final variant in resolved.variants) {
+      final label = variant.height > 0
+          ? "${variant.name} ${variant.height}P"
+          : variant.name;
+      qualities.add(
+        LivePlayQuality(
+          quality: label,
+          data: StripchatQualityData(
+            streamUrl: StripchatMouflon.appendPkey(
+              variant.url,
+              resolved.pkey,
+            ),
+          ),
+          sort: variant.height,
+        ),
+      );
+    }
     return qualities;
   }
 
-  /// 请求多个 CDN TLD 的 _auto.m3u8，解析出带 pkey 的真实变体 URL。
-  Future<String?> _resolveRealVariant(String modelId) async {
+  /// 请求多个 CDN TLD 的 _auto.m3u8，解析出 pkey 与所有变体。
+  Future<({String pkey, List<MasterVariant> variants})?> _resolveMaster(
+    String modelId,
+  ) async {
     const tlds = [
       "doppiocdn.com",
       "doppiocdn.org",
@@ -453,14 +482,11 @@ class StripchatSite implements LiveSite {
             "Referer": "$_baseUrl/",
           },
         );
-        final parsed = StripchatMouflon.parseMaster(text);
-        if (parsed == null || parsed.variantUrl.isEmpty) {
+        final parsed = StripchatMouflon.parseMasterVariants(text);
+        if (parsed.variants.isEmpty) {
           continue;
         }
-        return StripchatMouflon.appendPkey(
-          parsed.variantUrl,
-          parsed.pkey,
-        );
+        return parsed;
       } catch (_) {
         continue;
       }
@@ -479,7 +505,10 @@ class StripchatSite implements LiveSite {
     }
 
     // 经过本地解密代理播放真实流。
-    final proxied = await StripchatProxy.instance.proxyUrlFor(data.streamUrl);
+    final proxied = await StripchatProxy.instance.proxyUrlFor(
+      data.streamUrl,
+      lowLatency: data.lowLatency,
+    );
     return LivePlayUrl(urls: [proxied], headers: _headers);
   }
 
@@ -645,10 +674,16 @@ class StripchatQualityData {
   /// 带 pkey 的真实变体 m3u8 地址（交给本地解密代理）。
   final String streamUrl;
 
-  StripchatQualityData({required this.streamUrl});
+  /// 超低时延模式：小缓冲、低延迟，网络波动时可能卡顿。
+  final bool lowLatency;
+
+  StripchatQualityData({required this.streamUrl, this.lowLatency = false});
 
   @override
   String toString() {
-    return json.encode({"streamUrl": streamUrl});
+    return json.encode({
+      "streamUrl": streamUrl,
+      "lowLatency": lowLatency,
+    });
   }
 }

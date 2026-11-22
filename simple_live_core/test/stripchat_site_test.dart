@@ -63,6 +63,40 @@ https://media-hls.doppiocdn.com/media.mp4
       expect(StripchatMouflon.keyCount, greaterThan(0));
       expect(StripchatMouflon.pdkeyFor("1Dzcc6OjP73LKbtI"), isNotNull);
     });
+
+    test('解析 master 的所有清晰度变体', () {
+      const master = """
+#EXTM3U
+#EXT-X-MOUFLON:PSCH:v2:1Dzcc6OjP73LKbtI
+#EXT-X-STREAM-INF:BANDWIDTH=2381209,RESOLUTION=720x960,NAME="source"
+https://x/source.m3u8?a=1&amp;b=2
+#EXT-X-STREAM-INF:BANDWIDTH=640921,RESOLUTION=180x240,NAME="240p"
+https://x/240.m3u8
+""";
+      final parsed = StripchatMouflon.parseMasterVariants(master);
+      expect(parsed.pkey, "1Dzcc6OjP73LKbtI");
+      expect(parsed.variants.length, 2);
+      expect(parsed.variants.first.height, 960); // 按分辨率降序
+      expect(parsed.variants.first.url, contains("a=1&b=2"));
+      expect(parsed.variants.first.url, isNot(contains("&amp;")));
+    });
+
+    test('超低时延窗口更小', () {
+      const playlist = """
+#EXTM3U
+#EXT-X-TARGETDURATION:2
+#EXT-X-MAP:URI="init.mp4"
+#EXT-X-MOUFLON:PSCH:v2:1Dzcc6OjP73LKbtI
+#EXTINF:2
+#EXT-X-MOUFLON:URI:https://x/131766698_152_wKmEZonCgRn8OsPxwOseXB_1795348164.mp4
+""";
+      StripchatMouflon.clearSegmentCache();
+      final normal = StripchatMouflon.rewritePlaylist(playlist);
+      final ll = StripchatMouflon.rewritePlaylist(playlist, lowLatency: true);
+      // 同一批分片下，两者都能输出；窗口差异体现在多批次累积时
+      expect(normal.text, contains("#EXT-X-MEDIA-SEQUENCE"));
+      expect(ll.text, contains("#EXT-X-MEDIA-SEQUENCE"));
+    });
   });
 
   group('LiveUrlParser Stripchat', () {

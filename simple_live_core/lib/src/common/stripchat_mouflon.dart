@@ -48,6 +48,9 @@ class StripchatMouflon {
   /// 输出 playlist 时保留的分片数量（含历史）。
   static const int _outputWindow = 12;
 
+  /// 超低时延模式的窗口：小缓冲，延迟低但网络波动易卡顿。
+  static const int _lowLatencyWindow = 3;
+
   /// 清空分片缓存（切换房间/清晰度时调用）。
   static void clearSegmentCache() => _segmentCache.clear();
 
@@ -116,8 +119,10 @@ class StripchatMouflon {
   static ({String text, int decrypted}) rewritePlaylist(
     String playlist, {
     Map<String, String>? keyOverride,
+    bool lowLatency = false,
   }) {
     final keys = keyOverride ?? _keys;
+    final outputWindow = lowLatency ? _lowLatencyWindow : _outputWindow;
     final lines = playlist.split(RegExp(r'\r?\n'));
 
     // 1) 找 pkey → pdkey
@@ -177,8 +182,8 @@ class StripchatMouflon {
     if (sortedKeys.isEmpty) {
       return (text: head.join('\n'), decrypted: decrypted);
     }
-    final windowKeys = sortedKeys.length > _outputWindow
-        ? sortedKeys.sublist(sortedKeys.length - _outputWindow)
+    final windowKeys = sortedKeys.length > outputWindow
+        ? sortedKeys.sublist(sortedKeys.length - outputWindow)
         : sortedKeys;
     final firstSeq = windowKeys.first;
 
@@ -235,6 +240,59 @@ class StripchatMouflon {
     return (pkey: pkey, variantUrl: variant);
   }
 
+  /// 解析 master playlist 的所有清晰度变体。
+  static ({String pkey, List<MasterVariant> variants}) parseMasterVariants(
+    String master,
+  ) {
+    final pkeyMatch = RegExp(r'#EXT-X-MOUFLON:PSCH:v2:([A-Za-z0-9]+)')
+        .firstMatch(master);
+    final pkey = pkeyMatch?.group(1) ?? "";
+
+    final lines = master.split(RegExp(r'\r?\n'));
+    final variants = <MasterVariant>[];
+    String? pendingName;
+    int? pendingHeight;
+    int pendingBandwidth = 0;
+
+    for (final line in lines) {
+      if (line.startsWith("#EXT-X-STREAM-INF:")) {
+        final attrs = line.substring("#EXT-X-STREAM-INF:".length);
+        pendingName = _extractAttr(attrs, "NAME");
+        final resolution = _extractAttr(attrs, "RESOLUTION");
+        if (resolution != null) {
+          final parts = resolution.split("x");
+          if (parts.length == 2) {
+            pendingHeight = int.tryParse(parts[1]);
+          }
+        }
+        pendingBandwidth =
+            int.tryParse(_extractAttr(attrs, "BANDWIDTH") ?? "") ?? 0;
+      } else if (!line.startsWith("#") && line.trim().isNotEmpty) {
+        if (pendingName != null || pendingHeight != null) {
+          variants.add(MasterVariant(
+            name: pendingName ?? "${pendingHeight}p",
+            height: pendingHeight ?? 0,
+            bandwidth: pendingBandwidth,
+            url: line.trim().replaceAll("&amp;", "&"),
+          ));
+        }
+        pendingName = null;
+        pendingHeight = null;
+        pendingBandwidth = 0;
+      }
+    }
+    // 按分辨率从高到低排序
+    variants.sort((a, b) => b.height.compareTo(a.height));
+    return (pkey: pkey, variants: variants);
+  }
+
+  static String? _extractAttr(String attrs, String key) {
+    final match = RegExp('$key="([^"]*)"').firstMatch(attrs);
+    if (match != null) return match.group(1);
+    final matchPlain = RegExp('$key=([^,]+)').firstMatch(attrs);
+    return matchPlain?.group(1)?.trim();
+  }
+
   /// 给变体 URL 追加 pkey 参数。
   static String appendPkey(String url, String pkey) {
     if (pkey.isEmpty) {
@@ -243,4 +301,19 @@ class StripchatMouflon {
     final sep = url.contains("?") ? "&" : "?";
     return "$url${sep}psch=v2&pkey=$pkey";
   }
+}
+
+/// master playlist 中的一个清晰度变体。
+class MasterVariant {
+  final String name;
+  final int height;
+  final int bandwidth;
+  final String url;
+
+  MasterVariant({
+    required this.name,
+    required this.height,
+    required this.bandwidth,
+    required this.url,
+  });
 }
