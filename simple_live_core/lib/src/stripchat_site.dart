@@ -126,7 +126,7 @@ class StripchatSite implements LiveSite {
     int page = 1,
   }) async {
     if (page > 1) {
-      return const LiveCategoryResult(items: [], hasMore: false);
+      return LiveCategoryResult(items: [], hasMore: false);
     }
     final html = await HttpClient.instance.getText(
       "$_baseUrl/$tagUrl",
@@ -162,7 +162,7 @@ class StripchatSite implements LiveSite {
       if (inString) {
         if (escaped) {
           escaped = false;
-        } else if (c == r'\') {
+        } else if (c == "\\") {
           escaped = true;
         } else if (c == quote) {
           inString = false;
@@ -520,21 +520,8 @@ class StripchatSite implements LiveSite {
     }
 
     final qualities = <LivePlayQuality>[];
-    // 自动：用 master 的第一个（最高带宽）变体，交给播放器自适应。
-    final autoVariant = resolved.variants.first;
-    qualities.add(
-      LivePlayQuality(
-        quality: "自动",
-        data: StripchatQualityData(
-          streamUrl: StripchatMouflon.appendPkey(
-            autoVariant.url,
-            resolved.pkey,
-          ),
-        ),
-        sort: 1000,
-      ),
-    );
-    // 固定清晰度：稳定大缓冲
+    // App 的「最高/最低」偏好按列表索引选择（index 0 = 最高，末尾 = 最低）。
+    // 固定清晰度必须从高到低排在前面，保证「默认最高」选到真正的最高画质。
     for (final variant in resolved.variants) {
       final label = variant.height > 0
           ? "${variant.name} ${variant.height}P"
