@@ -690,21 +690,16 @@ Widget _buildFullBottomBar(
                 if (context == null) {
                   return;
                 }
+                // 静音时点击直接恢复音量，否则展开音量滑条。
+                if (controller.mutedState.value) {
+                  controller.toggleMute();
+                  return;
+                }
                 controller.showVolumeSlider(
                   context,
                   keepAlive: true,
                 );
               },
-              icon: Icon(
-                controller.mutedState.value
-                    ? Icons.volume_off
-                    : Icons.volume_down,
-                size: 24,
-                color: Colors.white,
-              ),
-            ),
-            IconButton(
-              onPressed: controller.toggleMute,
               icon: Icon(
                 controller.mutedState.value
                     ? Icons.volume_off
@@ -900,21 +895,16 @@ Widget _buildNormalBottomBar(
                     if (context == null) {
                       return;
                     }
+                    // 静音时点击直接恢复音量，否则展开音量滑条。
+                    if (controller.mutedState.value) {
+                      controller.toggleMute();
+                      return;
+                    }
                     controller.showVolumeSlider(
                       context,
                       keepAlive: true,
                     );
                   },
-                  icon: Icon(
-                    controller.mutedState.value
-                        ? Icons.volume_off
-                        : Icons.volume_down,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                ),
-                IconButton(
-                  onPressed: controller.toggleMute,
                   icon: Icon(
                     controller.mutedState.value
                         ? Icons.volume_off
