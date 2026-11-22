@@ -1,13 +1,13 @@
 {
-  "version": "1.0.0",
-  "tag": "v1.0.0",
-  "notes": "## 本版本特性\n\n- 新增 Stripchat 平台支持（Mouflon 解密播放真实流）\n- 支持清晰度选择与自动清晰度，超低时延独立开关\n- 补全 Stripchat 分区（女主播/男主播/情侣/跨性别）\n- 配置目录与原项目隔离，避免关注列表冲突\n- 应用内检查更新，可选择暂不更新，Windows 支持自动更新重启",
+  "version": "1.0.1",
+  "tag": "v1.0.1",
+  "notes": "## v1.0.1 更新说明\n\n- 补全 Stripchat 侧边栏细分分类（国家/年龄/种族/体型/玩法等 50+ 项）\n- Stripchat 清晰度新增「自动」选项，超低时延改为独立开关\n- 修复 GitHub Releases API 限流导致的检查更新 403 问题\n- 应用内检查更新可在启动时自动检查，支持暂不更新\n- Windows 支持自动更新并重启",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.0+10000-windows.zip",
-      "msix": "simple_live_app-1.0.0+10000-windows.msix"
+      "zip": "simple_live_app-1.0.1+10001-windows.zip",
+      "msix": "simple_live_app-1.0.1+10001-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.0"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.1"
 }
