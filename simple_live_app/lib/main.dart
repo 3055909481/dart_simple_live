@@ -85,15 +85,25 @@ void main(List<String> args) async {
   unawaited(setupDesktopWindowLifecycle());
 }
 
+/// 本 fork 的独立数据目录名。
+/// 与原项目共用 getApplicationSupportDirectory() 会读到同一份 Hive 数据
+/// （关注、历史、设置等），因此使用独立子目录避免冲突。
+const String kForkDataDirName = "simple_live_stripchat";
+
 Future<String?> resolveHivePath(List<String> args) async {
   if (Platform.isAndroid || Platform.isIOS) {
     return null;
   }
   final appSupportDir = await getApplicationSupportDirectory();
-  if (!isSecondaryDesktopInstance(args)) {
-    return appSupportDir.path;
+  // 隔离 fork 数据，避免与原项目共用关注列表/设置。
+  final forkDir = Directory(p.join(appSupportDir.path, kForkDataDirName));
+  if (!await forkDir.exists()) {
+    await forkDir.create(recursive: true);
   }
-  final instanceDir = await prepareSecondaryHiveDirectory(appSupportDir);
+  if (!isSecondaryDesktopInstance(args)) {
+    return forkDir.path;
+  }
+  final instanceDir = await prepareSecondaryHiveDirectory(forkDir);
   return instanceDir.path;
 }
 

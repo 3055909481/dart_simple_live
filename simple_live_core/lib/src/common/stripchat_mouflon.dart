@@ -39,6 +39,18 @@ class StripchatMouflon {
   static bool _refreshStarted = false;
   static DateTime? _lastRefresh;
 
+  /// 历史分片缓存：Stripchat 上游 playlist 仅保留约 3 个分片（~6 秒），
+  /// 对 mpv 等播放器窗口太短，容易停顿/闪屏。这里缓存已解密的分片，
+  /// 重写 playlist 时补足窗口，给播放器更充足的缓冲。
+  static final Map<int, String> _segmentCache = {};
+  static const int _maxSegmentCache = 60;
+
+  /// 输出 playlist 时保留的分片数量（含历史）。
+  static const int _outputWindow = 12;
+
+  /// 清空分片缓存（切换房间/清晰度时调用）。
+  static void clearSegmentCache() => _segmentCache.clear();
+
   /// 当前可用密钥数量。
   static int get keyCount => _keys.length;
 
@@ -107,10 +119,9 @@ class StripchatMouflon {
   }) {
     final keys = keyOverride ?? _keys;
     final lines = playlist.split(RegExp(r'\r?\n'));
-    final out = <String>[];
-    String pkey = "";
 
-    // 先找 pkey
+    // 1) 找 pkey → pdkey
+    String pkey = "";
     for (final line in lines) {
       final match = RegExp(r'#EXT-X-MOUFLON:PSCH:v2:([A-Za-z0-9]+)')
           .firstMatch(line);
@@ -121,33 +132,73 @@ class StripchatMouflon {
     }
     final pdkey = pkey.isEmpty ? null : keys[pkey];
 
+    // 2) 解析 head 标签 + 解密分片
+    final head = <String>["#EXTM3U"];
+    String? mapLine;
+    var targetDuration = 2;
     var decrypted = 0;
+
     for (final line in lines) {
+      if (line.startsWith("#EXT-X-TARGETDURATION:")) {
+        targetDuration =
+            int.tryParse(line.split(":").last) ?? targetDuration;
+      } else if (line.startsWith("#EXT-X-MAP:")) {
+        mapLine = line;
+      }
       const uriTag = "#EXT-X-MOUFLON:URI:";
-      if (line.startsWith(uriTag)) {
+      if (line.startsWith(uriTag) && pdkey != null) {
         final uri = line.substring(uriTag.length).trim();
-        if (pdkey != null) {
-          final decoded = _decryptUri(uri, pdkey);
-          if (decoded != null) {
-            out.add(decoded);
-            decrypted += 1;
-            continue;
-          }
+        final decoded = _decryptUri(uri, pdkey);
+        final seq = _extractSequence(uri);
+        if (decoded != null && seq != null) {
+          _segmentCache[seq] = decoded;
+          decrypted += 1;
         }
-        // 无密钥或解密失败：跳过该占位行
-        continue;
       }
-      // 广告占位分片 / 加密标记行不输出
-      if (line.trim() == "https://media-hls.doppiocdn.com/media.mp4") {
-        continue;
-      }
-      if (line.startsWith("#EXT-X-MOUFLON:FILE:") ||
-          line.startsWith("#EXT-X-MOUFLON:ADVERT")) {
-        continue;
-      }
-      out.add(line);
     }
-    return (text: out.join('\n'), decrypted: decrypted);
+
+    if (mapLine != null) {
+      head.add("#EXT-X-VERSION:6");
+      head.add("#EXT-X-TARGETDURATION:$targetDuration");
+      head.add("#EXT-X-INDEPENDENT-SEGMENTS");
+      head.add(mapLine);
+    }
+
+    // 3) 裁剪缓存
+    if (_segmentCache.length > _maxSegmentCache) {
+      final allKeys = _segmentCache.keys.toList()..sort();
+      for (final key in allKeys.take(_segmentCache.length - _maxSegmentCache)) {
+        _segmentCache.remove(key);
+      }
+    }
+
+    // 4) 从缓存取最近窗口，重新生成分片列表
+    final sortedKeys = _segmentCache.keys.toList()..sort();
+    if (sortedKeys.isEmpty) {
+      return (text: head.join('\n'), decrypted: decrypted);
+    }
+    final windowKeys = sortedKeys.length > _outputWindow
+        ? sortedKeys.sublist(sortedKeys.length - _outputWindow)
+        : sortedKeys;
+    final firstSeq = windowKeys.first;
+
+    final result = <String>[...head];
+    result.add("#EXT-X-MEDIA-SEQUENCE:$firstSeq");
+    for (final seq in windowKeys) {
+      result.add("#EXTINF:$targetDuration.000");
+      result.add(_segmentCache[seq]!);
+    }
+
+    return (text: result.join('\n'), decrypted: decrypted);
+  }
+
+  /// 从分片 URL 提取序号。
+  static int? _extractSequence(String uri) {
+    final match = RegExp(r'_(\d+)_[A-Za-z0-9+/=]+_\d+\.mp4').firstMatch(uri);
+    if (match == null) {
+      return null;
+    }
+    return int.tryParse(match.group(1) ?? "");
   }
 
   /// 从 MOUFLON:URI 中定位加密串并解密替换。

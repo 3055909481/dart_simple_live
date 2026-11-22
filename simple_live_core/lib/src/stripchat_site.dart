@@ -417,6 +417,8 @@ class StripchatSite implements LiveSite {
     // 请求 CDN master playlist，解析出带 pkey 的真实变体地址。
     // 直接拼接的 edge-hls 地址对匿名请求只会返回广告流。
     StripchatMouflon.ensureKeysRefreshed();
+    // 切换房间/清晰度时清空历史分片缓存，避免混入上一个流的分片。
+    StripchatMouflon.clearSegmentCache();
     final resolved = await _resolveRealVariant(data.streamName);
     if (resolved == null) {
       return const [];
