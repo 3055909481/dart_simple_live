@@ -45,6 +45,12 @@ void main() {
       expect(result.roomId, "Some_User");
     });
 
+    test('zh 子域 + /profile 路径', () {
+      final result = parse("https://zh.stripchat.com/JaneLiao/profile");
+      expect(result!.siteId, LiveUrlParser.siteStripchat);
+      expect(result.roomId, "JaneLiao");
+    });
+
     test('不带协议头与大小写 host', () {
       final result = parse("STRIPCHAT.COM/Keep_us_wild");
       expect(result!.siteId, LiveUrlParser.siteStripchat);

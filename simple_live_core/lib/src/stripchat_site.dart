@@ -170,24 +170,29 @@ class StripchatSite implements LiveSite {
 
   @override
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
-    // 先从列表数据里找，命中则无需解析整个页面。
+    // 优先解析模型主页内嵌的 SSR 状态：一次请求即可拿到用户名、头像、
+    // 直播状态、streamName 与清晰度，且不受列表接口的 limit 上限影响。
+    final html = await _getText("/$roomId");
+    final state = _extractPreloadedState(html);
+    if (state != null) {
+      final viewCam = state["viewCam"];
+      if (viewCam is Map && viewCam["isModelNotFounded"] != true) {
+        return _detailFromPageState(state, roomId);
+      }
+    }
+
+    // 页面结构变更时，退回到列表接口按 username 查找。
     final cached = await _findModelInList(roomId);
     if (cached != null) {
       return _detailFromModel(cached);
     }
-
-    // 兜底：解析模型主页内嵌的 SSR 状态。
-    final html = await _getText("/$roomId");
-    final state = _extractPreloadedState(html);
-    if (state == null) {
-      throw CoreError("Stripchat 房间数据解析失败，请稍后重试");
-    }
-    return _detailFromPageState(state, roomId);
+    throw CoreError("Stripchat 房间数据解析失败，请稍后重试");
   }
 
   /// 在若干页列表数据中查找指定 username，并缓存结果供详情/状态复用。
   Future<Map<String, dynamic>?> _findModelInList(String username) async {
-    const pageSize = 100;
+    // 站点列表接口 limit 上限为 80，超过会返回 400 invalid 'limit' value。
+    const pageSize = 60;
     const maxPages = 5;
     final lowerName = username.toLowerCase();
 
@@ -571,8 +576,8 @@ class StripchatSite implements LiveSite {
           final result = await _getJson(
             "/api/front/models",
             queryParameters: {
-              "limit": 100,
-              "offset": p * 100,
+              "limit": 60,
+              "offset": p * 60,
               "primaryTag": tag.id,
             },
           );
@@ -586,7 +591,7 @@ class StripchatSite implements LiveSite {
           }
           final total = result["filteredCount"] ?? 0;
           final totalInt = total is int ? total : int.tryParse("$total") ?? 0;
-          if ((p + 1) * 100 >= totalInt) {
+          if ((p + 1) * 60 >= totalInt) {
             break;
           }
         }
