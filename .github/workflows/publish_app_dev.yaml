@@ -23,6 +23,14 @@ on:
         description: "Build Linux packages"
         type: boolean
         default: false
+      publish_release:
+        description: "自动把构建产物发布到 GitHub Release（会覆盖同名资源）"
+        type: boolean
+        default: false
+      release_tag:
+        description: "发布到的 Release tag（publish_release 开启时有效）"
+        required: false
+        default: "v1.0.0"
   push:
     tags:
       - "dev_v*"
@@ -352,3 +360,40 @@ jobs:
             simple_live_app/build/dist/*/*.zip
         #完成
       - run: echo "🍏 Windows job's status is ${{ job.status }}."
+
+  # 自动发布构建产物到 GitHub Release
+  publish-release:
+    needs: [build-android, build-ios, build-macos, build-windows, build-linux]
+    # 所有 build job 都是 if 条件执行，跳过时其 result=skipped，这里只要求没有失败
+    if: ${{ !cancelled() && inputs.publish_release == true && !contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: List release assets
+        run: find release-artifacts -type f -printf '%p %s bytes\n'
+
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_tag }}
+          name: ${{ inputs.release_tag }}
+          token: ${{ github.token }}
+          fail_on_unmatched_files: false
+          overwrite_files: true
+          generate_release_notes: false
+          files: |
+            release-artifacts/**/*.apk
+            release-artifacts/**/*.ipa
+            release-artifacts/**/*.dmg
+            release-artifacts/**/*.deb
+            release-artifacts/**/*.zip
+            release-artifacts/**/*.msix
+
+      - run: echo "Release published to ${{ inputs.release_tag }}."
