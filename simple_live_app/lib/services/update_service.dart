@@ -20,8 +20,10 @@ class UpdateService extends GetxService {
   static UpdateService get instance => Get.find<UpdateService>();
 
   static const String _repo = "3055909481/dart_simple_live";
-  static const String _apiUrl =
-      "https://api.github.com/repos/$_repo/releases/latest";
+  // 用 raw 文件 + atom feed，避开 GitHub API 匿名 60次/小时 限流（国内共享IP易403）
+  static const String _versionJsonUrl =
+      "https://raw.githubusercontent.com/$_repo/master/version.json";
+  static const String _atomUrl = "https://github.com/$_repo/releases.atom";
   static const String _skipVersionKey = "UpdateSkipVersion";
   static const String _lastCheckKey = "UpdateLastCheck";
 
@@ -48,42 +50,34 @@ class UpdateService extends GetxService {
   }
 
   /// 检查更新。返回是否有新版本；静默模式不弹错误。
+  ///
+  /// 优先读仓库内 version.json（raw，无 API 限流），失败时回退 releases.atom。
   Future<AppRelease?> check({bool silent = true}) async {
     checking.value = true;
     error.value = null;
     try {
-      final resp = await _dio.get(_apiUrl);
-      if (resp.statusCode != 200 || resp.data is! Map) {
-        throw Exception("HTTP ${resp.statusCode}");
-      }
-      final data = resp.data as Map;
-      final tag = (data["tag_name"] ?? "").toString();
-      if (tag.isEmpty || data["draft"] == true || data["prerelease"] == true) {
-        release.value = null;
+      AppRelease? info;
+      // 主源：version.json
+      try {
+        final resp = await _dio.get(
+          _versionJsonUrl,
+          options: Options(
+            headers: {"Accept": "text/plain", "User-Agent": "Mozilla/5.0"},
+          ),
+        );
+        if (resp.statusCode == 200 && resp.data is Map) {
+          info = _parseVersionJson(resp.data as Map);
+        }
+      } catch (_) {}
+      // 兜底：atom feed
+      info ??= await _checkViaAtom();
+
+      if (info == null) {
+        error.value = "无法获取版本信息";
         return null;
       }
-      final assets = <ReleaseAsset>[];
-      if (data["assets"] is List) {
-        for (final a in data["assets"] as List) {
-          if (a is! Map) continue;
-          assets.add(ReleaseAsset(
-            name: (a["name"] ?? "").toString(),
-            downloadUrl: (a["browser_download_url"] ?? "").toString(),
-            size: a["size"] is int ? a["size"] as int : 0,
-          ));
-        }
-      }
-      final info = AppRelease(
-        version: _normalizeVersion(tag),
-        tag: tag,
-        body: (data["body"] ?? "").toString(),
-        htmlUrl: (data["html_url"] ?? "").toString(),
-        publishedAt: (data["published_at"] ?? "").toString(),
-        assets: assets,
-      );
       release.value = info;
 
-      // 记录检查时间
       try {
         await LocalStorageService.instance.setValue(
           _lastCheckKey,
@@ -107,6 +101,111 @@ class UpdateService extends GetxService {
     } finally {
       checking.value = false;
     }
+  }
+
+  AppRelease? _parseVersionJson(Map data) {
+    final version = (data["version"] ?? "").toString();
+    if (version.isEmpty) return null;
+    final tag = (data["tag"] ?? "v$version").toString();
+    final assets = <ReleaseAsset>[];
+    final rawAssets = data["assets"];
+    if (rawAssets is Map) {
+      final base = "https://github.com/$_repo/releases/download/$tag/";
+      rawAssets.forEach((key, value) {
+        if (value is Map) {
+          value.forEach((k, name) {
+            if (name is String && name.isNotEmpty) {
+              assets.add(ReleaseAsset(
+                name: name,
+                downloadUrl: "$base${Uri.encodeComponent(name)}",
+                size: 0,
+              ));
+            }
+          });
+        } else if (value is String && value.isNotEmpty) {
+          assets.add(ReleaseAsset(
+            name: value,
+            downloadUrl: "$base${Uri.encodeComponent(value)}",
+            size: 0,
+          ));
+        }
+      });
+    }
+    return AppRelease(
+      version: _normalizeVersion(version),
+      tag: tag,
+      body: (data["notes"] ?? "").toString(),
+      htmlUrl: (data["releasePage"] ??
+              "https://github.com/$_repo/releases/tag/$tag")
+          .toString(),
+      publishedAt: (data["released"] ?? "").toString(),
+      assets: assets,
+    );
+  }
+
+  /// 通过 releases.atom 获取最新版本（无 API 限流）。
+  Future<AppRelease?> _checkViaAtom() async {
+    final resp = await _dio.get(
+      _atomUrl,
+      options: Options(
+        responseType: ResponseType.plain,
+        headers: {"User-Agent": "Mozilla/5.0"},
+      ),
+    );
+    if (resp.statusCode != 200) return null;
+    final xml = resp.data.toString();
+    // 取第一个 entry 的 link href（tag 页）
+    final linkMatch = RegExp(
+      r'<entry>[\s\S]*?<link[^>]*href="([^"]+)"',
+    ).firstMatch(xml);
+    final titleMatch =
+        RegExp(r'<entry>[\s\S]*?<title>([^<]+)</title>').firstMatch(xml);
+    final contentMatch =
+        RegExp(r'<entry>[\s\S]*?<content[^>]*>([\s\S]*?)</content>')
+            .firstMatch(xml);
+    if (linkMatch == null) return null;
+
+    final htmlUrl = linkMatch.group(1) ?? "";
+    final tag = htmlUrl.split('/').last;
+    if (tag.isEmpty) return null;
+    // body: 解码 HTML 实体 + 去标签，转纯文本
+    var body = contentMatch?.group(1) ?? "";
+    body = _decodeHtml(body);
+    // 构造默认 asset 名（Windows 固定命名规则）
+    final base = "https://github.com/$_repo/releases/download/$tag/";
+    final assets = <ReleaseAsset>[];
+    final ver = _normalizeVersion(tag);
+    for (final name in <String>[
+      "simple_live_app-$ver+10000-windows.zip",
+      "simple_live_app-$ver+10000-windows.msix",
+    ]) {
+      assets.add(ReleaseAsset(
+        name: name,
+        downloadUrl: "$base${Uri.encodeComponent(name)}",
+        size: 0,
+      ));
+    }
+    return AppRelease(
+      version: ver,
+      tag: tag,
+      body: body,
+      htmlUrl: htmlUrl,
+      publishedAt: "",
+      assets: assets,
+    );
+  }
+
+  /// 简易 HTML 实体解码（atom content 是转义的 HTML）。
+  String _decodeHtml(String text) {
+    return text
+        .replaceAll("&lt;", "<")
+        .replaceAll("&gt;", ">")
+        .replaceAll("&quot;", '"')
+        .replaceAll("&#39;", "'")
+        .replaceAll("&amp;", "&")
+        .replaceAll(RegExp(r'<[^>]+>'), " ")
+        .replaceAll(RegExp(r'[ \t]+'), " ")
+        .trim();
   }
 
   /// 用户选择"暂不更新"：记住该版本，启动时不再提示。

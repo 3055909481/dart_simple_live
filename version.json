@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "tag": "v1.0.0",
+  "notes": "Stripchat 支持版：真实流解密、清晰度选择、超低时延、检查更新、配置隔离",
+  "released": "2026-11-22",
+  "assets": {
+    "windows": {
+      "zip": "simple_live_app-1.0.0+10000-windows.zip",
+      "msix": "simple_live_app-1.0.0+10000-windows.msix"
+    }
+  },
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.0"
+}
