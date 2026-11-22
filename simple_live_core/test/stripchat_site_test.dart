@@ -142,15 +142,22 @@ https://x/240.m3u8
       expect(site.name, isNotEmpty);
     });
 
-    test('分类包含内置 primaryTag', () async {
+    test('分类包含 4 个主分类与侧边栏细分', () async {
       final site = StripchatSite();
       final categories = await site.getCategores();
-      expect(categories, isNotEmpty);
+      expect(categories.map((e) => e.id).toList(),
+          containsAll(["girls", "men", "couples", "trans"]));
       final children = categories.first.children;
+      expect(children.length, greaterThan(40));
       expect(
         children.map((e) => e.id).toList(),
-        containsAll(["girls", "men", "couples", "trans"]),
+        containsAll(["girls/chinese", "girls/asian", "girls/milfs"]),
       );
+    });
+
+    test('侧边栏分类数据可查', () {
+      expect(StripchatCategories.all.length, greaterThan(40));
+      expect(StripchatCategories.find("chinese")?.name, "中文");
     });
   });
 }

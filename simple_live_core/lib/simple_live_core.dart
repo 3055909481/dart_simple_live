@@ -26,6 +26,7 @@ export 'src/common/windows_video_acceleration_policy.dart';
 export 'src/common/quality_memory.dart';
 export 'src/common/stripchat_mouflon.dart';
 export 'src/common/stripchat_proxy.dart';
+export 'src/stripchat_categories.dart';
 export 'src/model/live_message.dart';
 export 'src/danmaku/bilibili_danmaku.dart';
 export 'src/danmaku/douyu_danmaku.dart';

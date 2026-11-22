@@ -5,6 +5,7 @@ import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/common/platform_identity.dart';
 import 'package:simple_live_core/src/common/stripchat_mouflon.dart';
 import 'package:simple_live_core/src/common/stripchat_proxy.dart';
+import 'package:simple_live_core/src/stripchat_categories.dart';
 
 /// Stripchat 站点实现。
 ///
@@ -76,14 +77,26 @@ class StripchatSite implements LiveSite {
 
   @override
   Future<List<LiveCategory>> getCategores() async {
-    // 该站没有公开分类树接口。一级分类为"推荐"，
-    // 子分类 id 即 primaryTag（app 点子分类时用 id 请求房间列表）。
+    // 一级分类为 4 个 primaryTag，子分类为侧边栏细分（国家/体型/玩法等）。
+    // 子分类 id 形如 "girls/chinese"，getCategoryRooms 据此解析分类页。
+    final children = StripchatCategories.all
+        .map(
+          (c) => LiveSubCategory(
+            id: "girls/${c.slug}",
+            name: c.name,
+            parentId: "girls",
+          ),
+        )
+        .toList();
     return [
       LiveCategory(
-        id: "recommend",
-        name: "推荐",
-        children: List<LiveSubCategory>.from(_primaryTags),
+        id: "girls",
+        name: "女主播",
+        children: children,
       ),
+      LiveCategory(id: "men", name: "男主播", children: const []),
+      LiveCategory(id: "couples", name: "情侣", children: const []),
+      LiveCategory(id: "trans", name: "跨性别", children: const []),
     ];
   }
 
@@ -97,8 +110,83 @@ class StripchatSite implements LiveSite {
     LiveSubCategory category, {
     int page = 1,
   }) async {
-    // 子分类 id 即 primaryTag。
-    return _fetchModels(primaryTag: category.id, page: page);
+    final id = category.id;
+    // 细分分类 id 形如 "girls/chinese"：解析分类页 SSR 数据。
+    if (id.contains('/')) {
+      return _fetchCategoryPage(id, page: page);
+    }
+    // 主分类 id 即 primaryTag（girls/men/couples/trans）。
+    return _fetchModels(primaryTag: id, page: page);
+  }
+
+  /// 解析分类页 HTML 里的 __PRELOADED_STATE__.tagPage.models。
+  /// 分类页只有第一页数据（约 37 个主播），不支持 offset 分页。
+  Future<LiveCategoryResult> _fetchCategoryPage(
+    String tagUrl, {
+    int page = 1,
+  }) async {
+    if (page > 1) {
+      return const LiveCategoryResult(items: [], hasMore: false);
+    }
+    final html = await HttpClient.instance.getText(
+      "$_baseUrl/$tagUrl",
+      header: _headers,
+    );
+    final state = _extractPreloadedState(html);
+    if (state == null || state["tagPage"] is! Map) {
+      throw CoreError("Stripchat 分类数据解析失败");
+    }
+    final tagPage = state["tagPage"] as Map;
+    final models = tagPage["models"] is List ? tagPage["models"] as List : const [];
+    final items = models
+        .map(_parseRoomItem)
+        .whereType<LiveRoomItem>()
+        .toList();
+    return LiveCategoryResult(items: items, hasMore: false);
+  }
+
+  /// 从 HTML 中括号配对提取 window.__PRELOADED_STATE__ = {...}。
+  Map<String, dynamic>? _extractPreloadedState(String html) {
+    const marker = "window.__PRELOADED_STATE__";
+    final start = html.indexOf(marker);
+    if (start < 0) return null;
+    final braceStart = html.indexOf("{", start + marker.length);
+    if (braceStart < 0) return null;
+
+    var depth = 0;
+    var inString = false;
+    var escaped = false;
+    String? quote;
+    for (var i = braceStart; i < html.length; i += 1) {
+      final c = html[i];
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (c == r'\') {
+          escaped = true;
+        } else if (c == quote) {
+          inString = false;
+        }
+        continue;
+      }
+      if (c == '"' || c == "'") {
+        inString = true;
+        quote = c;
+      } else if (c == "{") {
+        depth += 1;
+      } else if (c == "}") {
+        depth -= 1;
+        if (depth == 0) {
+          try {
+            final decoded = json.decode(html.substring(braceStart, i + 1));
+            return decoded is Map<String, dynamic> ? decoded : null;
+          } catch (_) {
+            return null;
+          }
+        }
+      }
+    }
+    return null;
   }
 
   /// 统一的分页模型列表解析。
