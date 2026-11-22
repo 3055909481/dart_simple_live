@@ -208,6 +208,9 @@ class LocalStorageService extends GetxService {
   static const String kSuperChatScrollInFullscreen =
       "SuperChatScrollInFullscreen";
 
+  // Stripchat 超低时延模式
+  static const String kStripchatLowLatency = "StripchatLowLatency";
+
   // 全屏四角时钟
   static const String kPlayerClockEnable = "PlayerClockEnable";
   static const String kPlayerClockPosition = "PlayerClockPosition";

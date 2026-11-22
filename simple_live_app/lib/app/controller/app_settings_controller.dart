@@ -222,6 +222,9 @@ class AppSettingsController extends GetxController {
         .getValue(LocalStorageService.kSuperChatScrollInFullscreen, false);
     playerClockEnable.value = LocalStorageService.instance
         .getValue(LocalStorageService.kPlayerClockEnable, false);
+    stripchatLowLatency.value = LocalStorageService.instance
+        .getValue(LocalStorageService.kStripchatLowLatency, false);
+    StripchatSite.lowLatencyEnabled = stripchatLowLatency.value;
     playerClockPosition.value = _normalizePlayerClockPosition(
       LocalStorageService.instance.getValue(
         LocalStorageService.kPlayerClockPosition,
@@ -1387,6 +1390,15 @@ class AppSettingsController extends GetxController {
   static const int kPlayerClockPositionTopRight = 1;
   static const int kPlayerClockPositionBottomLeft = 2;
   static const int kPlayerClockPositionBottomRight = 3;
+
+  var stripchatLowLatency = false.obs;
+  void setStripchatLowLatency(bool e) {
+    stripchatLowLatency.value = e;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kStripchatLowLatency, e);
+    // 同步到 core 站点，立即生效
+    StripchatSite.lowLatencyEnabled = e;
+  }
 
   var playerClockEnable = false.obs;
   void setPlayerClockEnable(bool e) {

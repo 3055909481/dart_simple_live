@@ -149,7 +149,7 @@ https://x/240.m3u8
       final children = categories.first.children;
       expect(
         children.map((e) => e.id).toList(),
-        containsAll(["girls", "couples"]),
+        containsAll(["girls", "men", "couples", "trans"]),
       );
     });
   });

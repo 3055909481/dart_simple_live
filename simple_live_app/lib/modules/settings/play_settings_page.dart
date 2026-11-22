@@ -42,6 +42,16 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
               children: [
                 Obx(
                   () => SettingsSwitch(
+                    title: "Stripchat 超低时延",
+                    subtitle: "开启后降低 Stripchat 缓冲以减小延迟，网络波动时可能卡顿；"
+                        "关闭则缓冲更大、播放更稳定。重新进入直播间后生效",
+                    value: controller.stripchatLowLatency.value,
+                    onChanged: controller.setStripchatLowLatency,
+                  ),
+                ),
+                AppStyle.divider,
+                Obx(
+                  () => SettingsSwitch(
                     title: "省电模式",
                     subtitle: "降低发热：简化视频缩放算法、弹幕帧率限 60、关闭弹幕描边、"
                         "放宽播放检测频率、限制多开数量；画质略降，进入下一个直播间后生效",

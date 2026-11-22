@@ -18,6 +18,10 @@ import 'package:simple_live_core/src/common/stripchat_proxy.dart';
 class StripchatSite implements LiveSite {
   static const String _baseUrl = "https://stripchat.com";
 
+  /// 超低时延开关（由 App 侧设置注入）。
+  /// 开启后代理解输出小窗口 playlist（低缓冲、低延迟）。
+  static bool lowLatencyEnabled = false;
+
   static final Map<String, String> _headers = {
     "User-Agent": PlatformIdentity.stripchatUserAgent,
     "Accept": "application/json, text/plain, */*",
@@ -30,7 +34,9 @@ class StripchatSite implements LiveSite {
   /// 站点 tag 接口未开放，这里按公开前端已知的取值内置。
   static final List<LiveSubCategory> _primaryTags = [
     LiveSubCategory(id: "girls", name: "女主播", parentId: "recommend"),
+    LiveSubCategory(id: "men", name: "男主播", parentId: "recommend"),
     LiveSubCategory(id: "couples", name: "情侣", parentId: "recommend"),
+    LiveSubCategory(id: "trans", name: "跨性别", parentId: "recommend"),
   ];
 
   /// 搜索缓存：按关键词缓存一定时间内拉到的全量模型，避免逐页重复请求。
@@ -70,7 +76,8 @@ class StripchatSite implements LiveSite {
 
   @override
   Future<List<LiveCategory>> getCategores() async {
-    // 该站没有公开分类树接口，以 primaryTag 作为一级分类。
+    // 该站没有公开分类树接口。一级分类为"推荐"，
+    // 子分类 id 即 primaryTag（app 点子分类时用 id 请求房间列表）。
     return [
       LiveCategory(
         id: "recommend",
@@ -425,22 +432,21 @@ class StripchatSite implements LiveSite {
     }
 
     final qualities = <LivePlayQuality>[];
-    // 超低时延：用最高画质的变体，但代理用小窗口（低缓冲）。
-    final bestVariant = resolved.variants.first;
+    // 自动：用 master 的第一个（最高带宽）变体，交给播放器自适应。
+    final autoVariant = resolved.variants.first;
     qualities.add(
       LivePlayQuality(
-        quality: "超低时延",
+        quality: "自动",
         data: StripchatQualityData(
           streamUrl: StripchatMouflon.appendPkey(
-            bestVariant.url,
+            autoVariant.url,
             resolved.pkey,
           ),
-          lowLatency: true,
         ),
         sort: 1000,
       ),
     );
-    // 普通清晰度：稳定大缓冲
+    // 固定清晰度：稳定大缓冲
     for (final variant in resolved.variants) {
       final label = variant.height > 0
           ? "${variant.name} ${variant.height}P"
@@ -505,9 +511,10 @@ class StripchatSite implements LiveSite {
     }
 
     // 经过本地解密代理播放真实流。
+    // 超低时延是全局开关（不绑定具体清晰度）。
     final proxied = await StripchatProxy.instance.proxyUrlFor(
       data.streamUrl,
-      lowLatency: data.lowLatency,
+      lowLatency: lowLatencyEnabled,
     );
     return LivePlayUrl(urls: [proxied], headers: _headers);
   }
@@ -674,16 +681,10 @@ class StripchatQualityData {
   /// 带 pkey 的真实变体 m3u8 地址（交给本地解密代理）。
   final String streamUrl;
 
-  /// 超低时延模式：小缓冲、低延迟，网络波动时可能卡顿。
-  final bool lowLatency;
-
-  StripchatQualityData({required this.streamUrl, this.lowLatency = false});
+  StripchatQualityData({required this.streamUrl});
 
   @override
   String toString() {
-    return json.encode({
-      "streamUrl": streamUrl,
-      "lowLatency": lowLatency,
-    });
+    return json.encode({"streamUrl": streamUrl});
   }
 }
