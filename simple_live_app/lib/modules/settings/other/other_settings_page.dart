@@ -6,8 +6,10 @@ import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/settings/other/other_settings_controller.dart';
+import 'package:simple_live_app/services/audio_device_service.dart';
 import 'package:simple_live_app/services/mpv_options_service.dart';
 import 'package:simple_live_app/widgets/settings/settings_action.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
@@ -216,6 +218,63 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                     },
                   ),
                 ),
+                if (AudioDeviceService.supported) ...[
+                  AppStyle.divider,
+                  Obx(
+                    () {
+                      if (!controller.audioDevicesLoaded.value) {
+                        controller.loadAudioDevices();
+                        return const SizedBox(
+                          height: 48,
+                          child: Center(
+                            child: SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        );
+                      }
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SettingsMenu<String>(
+                            title: "默认音频输出设备（全局）",
+                            value: AudioDeviceService
+                                .instance.globalDeviceId.value,
+                            valueMap: controller.audioDeviceValueMap,
+                            onChanged: (value) {
+                              AudioDeviceService.instance.setGlobal(value);
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: AppStyle.edgeInsetsH12,
+                            child: Text(
+                              "平台单独配置（优先于全局，直播间设置优先于此）",
+                              style: Get.textTheme.bodySmall,
+                            ),
+                          ),
+                          ...Sites.supportSites.map((site) {
+                            return Obx(
+                              () => SettingsMenu<String>(
+                                title: site.name,
+                                value: AudioDeviceService
+                                        .instance.siteDevices[site.id] ??
+                                    "auto",
+                                valueMap: controller.audioDeviceValueMap,
+                                onChanged: (value) {
+                                  AudioDeviceService.instance
+                                      .setSite(site.id, value);
+                                },
+                              ),
+                            );
+                          }),
+                        ],
+                      );
+                    },
+                  ),
+                ],
                 AppStyle.divider,
                 Obx(
                   () => SettingsMenu(

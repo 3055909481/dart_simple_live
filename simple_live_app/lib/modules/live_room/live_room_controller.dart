@@ -30,6 +30,7 @@ import 'package:simple_live_app/modules/live_room/widgets/live_contribution_rank
 import 'package:simple_live_app/modules/settings/danmu_settings_page.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
 import 'package:simple_live_app/routes/route_path.dart';
+import 'package:simple_live_app/services/audio_device_service.dart';
 import 'package:simple_live_app/services/current_room_service.dart';
 import 'package:simple_live_app/services/custom_category_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
@@ -2286,7 +2287,25 @@ class LiveRoomController extends PlayerController
       await initSystem();
       if (!_isCurrentLoad(loadGeneration)) return;
     }
+    // 解析三级音频输出设备：直播间 > 平台 > 全局
+    if (AudioDeviceService.supported) {
+      audioDeviceId = AudioDeviceService.instance.resolveDeviceId(
+        siteId: site.id,
+        roomId: roomId,
+      );
+    }
     await initializePlayer();
+    // 播放器可能已提前初始化，这里再应用一次确保生效。
+    if (AudioDeviceService.supported && audioDeviceId != "auto") {
+      try {
+        final platform = player.platform;
+        if (platform is NativePlayer) {
+          await platform.setProperty('audio-device', audioDeviceId);
+        }
+      } catch (e) {
+        Log.d("应用音频输出设备失败: $e");
+      }
+    }
     if (!_isCurrentLoad(loadGeneration)) {
       return;
     }
@@ -2976,6 +2995,50 @@ class LiveRoomController extends PlayerController
         ],
       ),
     );
+  }
+
+  /// 显示音频输出设备选择（仅桌面端）。选择后写入直播间级配置并立即生效。
+  Future<void> showAudioDeviceSheet() async {
+    if (!AudioDeviceService.supported) {
+      SmartDialog.showToast("当前平台不支持选择音频输出设备");
+      return;
+    }
+    SmartDialog.showLoading(msg: "");
+    final devices = await AudioDeviceService.instance.detectDevices();
+    SmartDialog.dismiss(status: SmartStatus.loading);
+    if (devices.isEmpty) {
+      SmartDialog.showToast("未探测到可用的音频输出设备");
+      return;
+    }
+    final service = AudioDeviceService.instance;
+    final roomKey = "${site.id}_$roomId";
+    final current = service.roomDevices[roomKey] ??
+        service.siteDevices[site.id] ??
+        service.globalDeviceId.value;
+    final currentDevice = devices.firstWhere(
+      (d) => d.id == current,
+      orElse: () => devices.first,
+    );
+    final picked = await Utils.showOptionDialog<AudioOutputDevice>(
+      devices,
+      currentDevice,
+      title: "音频输出设备（本直播间）",
+      titleBuilder: (device) => Text(device.name),
+      subtitleBuilder: (device) =>
+          device.isAuto ? const Text("跟随平台/全局配置") : null,
+    );
+    if (picked == null) return;
+    service.setRoom(roomKey, picked.id);
+    audioDeviceId = picked.id;
+    try {
+      final platform = player.platform;
+      if (platform is NativePlayer) {
+        await platform.setProperty('audio-device', picked.id);
+      }
+    } catch (e) {
+      Log.d("切换音频设备失败: $e");
+    }
+    SmartDialog.showToast("已切换到：${picked.name}");
   }
 
   void showLiveSettingsSheet() {

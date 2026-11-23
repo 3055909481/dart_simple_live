@@ -21,6 +21,7 @@ import 'package:simple_live_app/app/custom_throttle.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/mpv_exit_helper.dart';
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/services/audio_device_service.dart';
 import 'package:simple_live_app/services/background_playback_service.dart';
 import 'package:simple_live_app/services/ios_video_output_size.dart';
 import 'package:simple_live_app/services/mpv_options_service.dart';
@@ -169,6 +170,9 @@ mixin PlayerMixin {
   bool _playerInitialized = false;
   Future<void>? _playerInitializationFuture;
   final int playerInstanceId = ++_nextPlayerInstanceId;
+
+  /// 当前直播间解析出的音频输出设备 ID（由上层在初始化前设置）。
+  String audioDeviceId = "auto";
   GlobalKey<VideoState> globalPlayerKey = GlobalKey<VideoState>();
   GlobalKey globalDanmuKey = GlobalKey();
 
@@ -221,6 +225,14 @@ mixin PlayerMixin {
           'ao',
           AppSettingsController.instance.audioOutputDriver.value,
         );
+      }
+    }
+    // 应用音频输出设备（三级配置解析后的结果）
+    if (AudioDeviceService.supported && audioDeviceId != "auto") {
+      try {
+        await nativePlayer.setProperty('audio-device', audioDeviceId);
+      } catch (e) {
+        Log.d("设置音频输出设备失败: $e");
       }
     }
     // media_kit 仓库更新导致的问题，临时解决办法

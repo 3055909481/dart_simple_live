@@ -17,6 +17,7 @@ import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/live_room/player/player_controls.dart';
 import 'package:simple_live_app/modules/live_room/widgets/live_contribution_rank_panel.dart';
+import 'package:simple_live_app/services/audio_device_service.dart';
 import 'package:simple_live_app/services/custom_category_service.dart';
 import 'package:simple_live_app/services/live_subtitle_service.dart';
 import 'package:simple_live_app/widgets/keep_alive_wrapper.dart';
@@ -1635,6 +1636,13 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                 title: "直播设置",
                 onTap: controller.showLiveSettingsSheet,
               ),
+              if (AudioDeviceService.supported) ...[
+                AppStyle.divider,
+                SettingsAction(
+                  title: "音频输出设备",
+                  onTap: controller.showAudioDeviceSheet,
+                ),
+              ],
               AppStyle.divider,
               SettingsAction(
                 title: "听直播",

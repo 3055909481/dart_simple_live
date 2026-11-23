@@ -29,6 +29,7 @@ import 'package:simple_live_app/modules/live_room/live_room_controller.dart';
 import 'package:simple_live_app/modules/other/debug_log_page.dart';
 import 'package:simple_live_app/routes/app_pages.dart';
 import 'package:simple_live_app/routes/route_path.dart';
+import 'package:simple_live_app/services/audio_device_service.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/current_room_service.dart';
 import 'package:simple_live_app/services/custom_category_service.dart';
@@ -533,6 +534,7 @@ Future initServices() async {
   Get.put(CustomCategoryService());
   Get.put(LiveSubtitleService());
   Get.put(ProfileBackupService());
+  Get.put(AudioDeviceService());
 
   if (DesktopStartupArgs.isSecondaryDesktopInstance) {
     Log.i("Skip SyncService for desktop secondary player instance");

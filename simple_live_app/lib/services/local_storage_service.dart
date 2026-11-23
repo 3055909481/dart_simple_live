@@ -100,6 +100,9 @@ class LocalStorageService extends GetxService {
   static const String kQualityLevel = "QualityLevel";
   static const String kQualityLevelCellular = "QualityLevelCellular";
   static const String kQualityMemory = "QualityMemory";
+  static const String kAudioDeviceGlobal = "AudioDeviceGlobal";
+  static const String kAudioDeviceSites = "AudioDeviceSites";
+  static const String kAudioDeviceRooms = "AudioDeviceRooms";
   static const String kAutoExitEnable = "AutoExitEnable";
   static const String kAutoExitDuration = "AutoExitDuration";
   static const String kRoomAutoExitDuration = "RoomAutoExitDuration";

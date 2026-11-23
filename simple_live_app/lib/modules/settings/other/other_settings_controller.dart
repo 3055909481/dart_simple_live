@@ -14,6 +14,7 @@ import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:path/path.dart' as p;
 import 'package:simple_live_app/app/utils.dart';
+import 'package:simple_live_app/services/audio_device_service.dart';
 import 'package:simple_live_app/services/live_subtitle_service.dart';
 import 'package:simple_live_app/services/local_storage_service.dart';
 import 'package:simple_live_app/services/mpv_options_service.dart';
@@ -23,6 +24,21 @@ import 'package:simple_live_core/simple_live_core.dart';
 
 class OtherSettingsController extends BaseController {
   RxList<LogFileModel> logFiles = <LogFileModel>[].obs;
+
+  /// 音频输出设备列表（设备选项按需异步加载）
+  final audioDevices = <AudioOutputDevice>[].obs;
+  final audioDevicesLoaded = false.obs;
+
+  Future<void> loadAudioDevices() async {
+    if (audioDevicesLoaded.value) return;
+    final devices = await AudioDeviceService.instance.detectDevices();
+    audioDevices.assignAll(devices);
+    audioDevicesLoaded.value = true;
+  }
+
+  Map<String, String> get audioDeviceValueMap => {
+        for (final device in audioDevices) device.id: device.name,
+      };
 
   var videoOutputDrivers = {
     "gpu": "gpu",

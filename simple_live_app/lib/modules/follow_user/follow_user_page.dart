@@ -505,26 +505,23 @@ class FollowUserPage extends GetView<FollowUserController> {
 
     final isAllTag =
         controller.selectedTagId.value == FollowUserController.allTagId;
-    final isAllGroup = controller.selectedGroupId.value == "all";
-    final isStatusMode =
-        controller.groupMode.value == FollowGroupMode.liveStatus;
+    final isAllStatus = controller.selectedStatusId.value == "all";
+    final isAllSite = controller.selectedSiteId.value == "all";
 
     // 每个按钮显示当前选中项名称；未选具体项时显示分类名。
-    final tagLabel = isAllTag
-        ? "标签"
-        : controller.selectedTagName;
-    final statusLabel = (isStatusMode && !isAllGroup)
+    final tagLabel = isAllTag ? "标签" : controller.selectedTagName;
+    final statusLabel = !isAllStatus
         ? controller.statusGroupOptions
             .firstWhere(
-              (o) => o.id == controller.selectedGroupId.value,
+              (o) => o.id == controller.selectedStatusId.value,
               orElse: () => controller.statusGroupOptions.first,
             )
             .title
         : "状态";
-    final platformLabel = (!isStatusMode && !isAllGroup)
+    final platformLabel = !isAllSite
         ? controller.platformGroupOptions
             .firstWhere(
-              (o) => o.id == controller.selectedGroupId.value,
+              (o) => o.id == controller.selectedSiteId.value,
               orElse: () => controller.platformGroupOptions.first,
             )
             .title
@@ -541,10 +538,11 @@ class FollowUserPage extends GetView<FollowUserController> {
               padding: const EdgeInsets.only(right: 8),
               child: FilterButton(
                 text: "全部",
-                selected: isAllTag && isAllGroup,
+                selected: isAllTag && isAllStatus && isAllSite,
                 onTap: () {
                   controller.setSelectedTag(controller.filterTagOptions.first);
-                  controller.setGroupFilter(FollowGroupMode.liveStatus, "all");
+                  controller.setStatusFilter("all");
+                  controller.setSiteFilter("all");
                 },
               ),
             ),
@@ -569,17 +567,15 @@ class FollowUserPage extends GetView<FollowUserController> {
             ),
             dropdown(
               label: statusLabel,
-              active: isStatusMode && !isAllGroup,
+              active: !isAllStatus,
               items: controller.statusGroupOptions.map(menuItem).toList(),
-              onSelected: (id) =>
-                  controller.setGroupFilter(FollowGroupMode.liveStatus, id),
+              onSelected: (id) => controller.setStatusFilter(id),
             ),
             dropdown(
               label: platformLabel,
-              active: !isStatusMode && !isAllGroup,
+              active: !isAllSite,
               items: controller.platformGroupOptions.map(menuItem).toList(),
-              onSelected: (id) =>
-                  controller.setGroupFilter(FollowGroupMode.platform, id),
+              onSelected: (id) => controller.setSiteFilter(id),
             ),
           ],
         ),

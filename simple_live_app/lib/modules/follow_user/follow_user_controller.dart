@@ -53,6 +53,9 @@ class FollowUserController extends BasePageController<FollowUser> {
 
   var groupMode = FollowGroupMode.liveStatus.obs;
   var selectedGroupId = "all".obs;
+  /// 状态与平台改为独立筛选维度，可同时生效。
+  var selectedStatusId = "all".obs;
+  var selectedSiteId = "all".obs;
   var selectedTagId = allTagId.obs;
   var searchKeyword = "".obs;
   RxBool get tagPanelExpanded =>
@@ -130,10 +133,20 @@ class FollowUserController extends BasePageController<FollowUser> {
 
   void _restoreGroupSelection() {
     final settings = AppSettingsController.instance;
-    groupMode.value = settings.followGroupMode.value == "platform"
+    final mode = settings.followGroupMode.value == "platform"
         ? FollowGroupMode.platform
         : FollowGroupMode.liveStatus;
+    groupMode.value = mode;
     selectedGroupId.value = settings.followSelectedGroupId.value;
+    // 从旧的单一分组选择迁移到独立的两个维度。
+    final legacy = settings.followSelectedGroupId.value;
+    if (mode == FollowGroupMode.platform) {
+      selectedSiteId.value = legacy;
+      selectedStatusId.value = "all";
+    } else {
+      selectedStatusId.value = legacy;
+      selectedSiteId.value = "all";
+    }
   }
 
   @override
@@ -218,9 +231,7 @@ class FollowUserController extends BasePageController<FollowUser> {
   List<FollowUser> get currentPageTargets => list.toList();
 
   String get currentRefreshScopeKey {
-    final mode =
-        groupMode.value == FollowGroupMode.platform ? "platform" : "live";
-    return "${currentDisplayPage.value}:${selectedTagId.value}:${selectedGroupId.value}:$mode";
+    return "${currentDisplayPage.value}:${selectedTagId.value}:${selectedStatusId.value}:${selectedSiteId.value}";
   }
 
   List<FollowUserTag> get filterTagOptions => [
@@ -380,36 +391,34 @@ class FollowUserController extends BasePageController<FollowUser> {
       : platformGroupOptions;
 
   List<FollowUser> _filterBySelectedGroup() {
-    FollowGroupOption? selected;
-    for (final option in groupOptions) {
-      if (option.id == selectedGroupId.value) {
-        selected = option;
-        break;
+    Iterable<FollowUser> source = _buildSelectedTagList();
+
+    // 状态筛选（独立于平台）
+    final statusId = selectedStatusId.value;
+    if (statusId != "all") {
+      Set<int>? expectedStatus;
+      for (final option in statusGroupOptions) {
+        if (option.id == statusId && option.liveStatus != null) {
+          expectedStatus = option.liveStatus == 1
+              ? {0, 1}
+              : {option.liveStatus!};
+          break;
+        }
+      }
+      if (expectedStatus != null) {
+        source = source.where(
+          (item) => expectedStatus!.contains(item.liveStatus.value),
+        );
       }
     }
-    final source = _buildSelectedTagList();
-    if (selected == null || selected.id == "all") {
-      selectedGroupId.value = "all";
-      return FollowService.instance.sortFollowUsers(
-        _distinctFollowUsers(source),
-      );
+
+    // 平台筛选（独立于状态，两者可同时生效）
+    final siteIdValue = selectedSiteId.value;
+    if (siteIdValue != "all" && siteIdValue.startsWith("site:")) {
+      final siteId = siteIdValue.substring(5);
+      source = source.where((item) => item.siteId == siteId);
     }
-    final liveStatus = selected.liveStatus;
-    if (liveStatus != null) {
-      final expectedStatus = liveStatus == 1 ? {0, 1} : {liveStatus};
-      return FollowService.instance.sortFollowUsers(
-        _distinctFollowUsers(
-          source
-              .where((item) => expectedStatus.contains(item.liveStatus.value)),
-        ),
-      );
-    }
-    final siteId = selected.siteId;
-    if (siteId != null) {
-      return FollowService.instance.sortFollowUsers(
-        _distinctFollowUsers(source.where((item) => item.siteId == siteId)),
-      );
-    }
+
     return FollowService.instance.sortFollowUsers(
       _distinctFollowUsers(source),
     );
@@ -520,6 +529,36 @@ class FollowUserController extends BasePageController<FollowUser> {
     currentDisplayPage.value = 1;
     filterData();
     _jumpToTop();
+  }
+
+  /// 设置状态筛选（不影响平台）。
+  void setStatusFilter(String optionId) {
+    selectedStatusId.value = optionId;
+    _saveIndependentSelection();
+    currentDisplayPage.value = 1;
+    filterData();
+    _jumpToTop();
+  }
+
+  /// 设置平台筛选（不影响状态）。
+  void setSiteFilter(String optionId) {
+    selectedSiteId.value = optionId;
+    _saveIndependentSelection();
+    currentDisplayPage.value = 1;
+    filterData();
+    _jumpToTop();
+  }
+
+  void _saveIndependentSelection() {
+    // 兼容旧持久化：以平台优先保存，状态次之。
+    final usePlatform = selectedSiteId.value != "all";
+    groupMode.value = usePlatform
+        ? FollowGroupMode.platform
+        : FollowGroupMode.liveStatus;
+    selectedGroupId.value = usePlatform
+        ? selectedSiteId.value
+        : selectedStatusId.value;
+    _saveGroupSelection();
   }
 
   void _saveGroupSelection() {
