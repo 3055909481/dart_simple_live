@@ -41,6 +41,8 @@ class UpdateService extends GetxService {
   final RxnString error = RxnString();
   final RxDouble downloadProgress = 0.0.obs;
   final RxBool downloading = false.obs;
+  /// 更新过程中的错误，供对话框内直接展示（snackbar 会被 dialog 遮挡）。
+  final RxnString updateError = RxnString();
 
   String get currentVersion => Utils.packageInfo.version;
 
@@ -117,7 +119,9 @@ class UpdateService extends GetxService {
             if (name is String && name.isNotEmpty) {
               assets.add(ReleaseAsset(
                 name: name,
-                downloadUrl: "$base${Uri.encodeComponent(name)}",
+                // 不要在这里 encodeComponent：Dio 下载时会再编码一次，
+                // 文件名里的 '+' 会变成 %2B → %252B 导致 404。直接拼原名。
+                downloadUrl: "$base$name",
                 size: 0,
               ));
             }
@@ -125,7 +129,7 @@ class UpdateService extends GetxService {
         } else if (value is String && value.isNotEmpty) {
           assets.add(ReleaseAsset(
             name: value,
-            downloadUrl: "$base${Uri.encodeComponent(value)}",
+            downloadUrl: "$base$value",
             size: 0,
           ));
         }
@@ -171,17 +175,18 @@ class UpdateService extends GetxService {
     // body: 解码 HTML 实体 + 去标签，转纯文本
     var body = contentMatch?.group(1) ?? "";
     body = _decodeHtml(body);
-    // 构造默认 asset 名（Windows 固定命名规则）
+    // 构造默认 asset 名（atom 兜底时拿不到 version.json 的精确资产名）。
+    // 不预先编码，避免 Dio 二次编码导致 404。
     final base = "https://github.com/$_repo/releases/download/$tag/";
     final assets = <ReleaseAsset>[];
     final ver = _normalizeVersion(tag);
     for (final name in <String>[
-      "simple_live_app-$ver+10000-windows.zip",
-      "simple_live_app-$ver+10000-windows.msix",
+      "simple_live_app-$ver-windows.zip",
+      "simple_live_app-$ver-windows.msix",
     ]) {
       assets.add(ReleaseAsset(
         name: name,
-        downloadUrl: "$base${Uri.encodeComponent(name)}",
+        downloadUrl: "$base$name",
         size: 0,
       ));
     }
@@ -257,6 +262,7 @@ class UpdateService extends GetxService {
 
     downloading.value = true;
     downloadProgress.value = 0;
+    updateError.value = null;
     try {
       final tempDir = await getTemporaryDirectory();
       final zipPath = p.join(tempDir.path, "simple_live_update.zip");
@@ -301,6 +307,7 @@ class UpdateService extends GetxService {
       exit(0);
     } catch (e) {
       Log.e("Windows 自动更新失败: $e", StackTrace.current);
+      updateError.value = "下载更新包失败：$e";
       return false;
     } finally {
       downloading.value = false;

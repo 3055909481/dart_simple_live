@@ -77,23 +77,37 @@ class UpdateDialog {
                   ),
                 const SizedBox(height: 8),
                 Obx(
-                  () => service.downloading.value
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            LinearProgressIndicator(
-                              value: service.downloadProgress.value > 0
-                                  ? service.downloadProgress.value
-                                  : null,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "下载中 ${(service.downloadProgress.value * 100).toStringAsFixed(0)}%",
-                              style: const TextStyle(fontSize: 11),
-                            ),
-                          ],
-                        )
-                      : const SizedBox.shrink(),
+                  () {
+                    if (service.updateError.value != null) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          service.updateError.value!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Get.theme.colorScheme.error,
+                          ),
+                        ),
+                      );
+                    }
+                    return service.downloading.value
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              LinearProgressIndicator(
+                                value: service.downloadProgress.value > 0
+                                    ? service.downloadProgress.value
+                                    : null,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "下载中 ${(service.downloadProgress.value * 100).toStringAsFixed(0)}%",
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                            ],
+                          )
+                        : const SizedBox.shrink();
+                  },
                 ),
               ],
             ),
