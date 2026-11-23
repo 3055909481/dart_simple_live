@@ -271,15 +271,25 @@ class UpdateService extends GetxService {
         await zipFile.delete();
       }
 
-      await _dio.download(
-        asset.downloadUrl,
-        zipPath,
-        onReceiveProgress: (received, total) {
-          if (total > 0) {
-            downloadProgress.value = received / total;
+      var downloadUrl = asset.downloadUrl;
+      try {
+        await _downloadToFile(downloadUrl, zipPath);
+      } on DioException catch (e) {
+        // 404 时用 GitHub API 查询该 tag 的真实资产名再试一次。
+        // 覆盖两种场景：①发版时序窗口（version.json 已更新但资产刚就绪）；
+        // ②atom 兜底拼出的文件名缺 build number（如 +10009）。
+        if (e.response?.statusCode == 404) {
+          final realUrl = await _resolveRealAssetUrl(info.tag, asset.name);
+          if (realUrl != null && realUrl != downloadUrl) {
+            downloadUrl = realUrl;
+            await _downloadToFile(downloadUrl, zipPath);
+          } else {
+            rethrow;
           }
-        },
-      );
+        } else {
+          rethrow;
+        }
+      }
 
       final appDir = p.dirname(Platform.resolvedExecutable);
       final scriptPath = p.join(tempDir.path, "simple_live_update.ps1");
@@ -338,6 +348,56 @@ class UpdateService extends GetxService {
       }
     }
     return "更新失败，请稍后重试。";
+  }
+
+  Future<void> _downloadToFile(String url, String savePath) async {
+    await _dio.download(
+      url,
+      savePath,
+      onReceiveProgress: (received, total) {
+        if (total > 0) {
+          downloadProgress.value = received / total;
+        }
+      },
+    );
+  }
+
+  /// 404 时通过 GitHub API 查询 tag 下的真实资产名，拼出正确下载链接。
+  /// 只在更新这种低频场景调用，且是失败兜底，不会触发 API 限流问题。
+  Future<String?> _resolveRealAssetUrl(String tag, String requestedName) async {
+    try {
+      final resp = await _dio.get(
+        "https://api.github.com/repos/$_repo/releases/tags/$tag",
+        options: Options(
+          headers: {"Accept": "application/vnd.github+json"},
+        ),
+      );
+      final raw = resp.data;
+      if (raw is! Map) return null;
+      final assets = raw["assets"];
+      if (assets is! List) return null;
+      final wanted = requestedName.toLowerCase();
+      for (final a in assets) {
+        if (a is! Map) continue;
+        final name = a["name"]?.toString() ?? "";
+        final lower = name.toLowerCase();
+        // 优先精确匹配，其次匹配同类型（zip/msix）+ windows
+        if (lower == wanted) {
+          return a["browser_download_url"]?.toString();
+        }
+      }
+      final isZip = wanted.endsWith(".zip");
+      for (final a in assets) {
+        if (a is! Map) continue;
+        final name = a["name"]?.toString() ?? "";
+        final lower = name.toLowerCase();
+        if (lower.contains("windows") &&
+            (isZip ? lower.endsWith(".zip") : lower.endsWith(".msix"))) {
+          return a["browser_download_url"]?.toString();
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   /// 选择 Windows 更新包：优先 zip（免安装覆盖），其次 msix。
