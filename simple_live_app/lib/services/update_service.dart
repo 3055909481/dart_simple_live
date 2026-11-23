@@ -307,11 +307,37 @@ class UpdateService extends GetxService {
       exit(0);
     } catch (e) {
       Log.e("Windows 自动更新失败: $e", StackTrace.current);
-      updateError.value = "下载更新包失败：$e";
+      updateError.value = _friendlyUpdateError(e);
       return false;
     } finally {
       downloading.value = false;
     }
+  }
+
+  /// 把下载异常转成简短的中文提示，避免给用户一长串英文技术细节。
+  String _friendlyUpdateError(Object e) {
+    if (e is DioException) {
+      final status = e.response?.statusCode;
+      if (status == 404) {
+        return "新版本安装包尚未就绪，请稍后再试，或到 Release 页手动下载。";
+      }
+      if (status != null && status >= 500) {
+        return "更新服务器暂时不可用（$status），请稍后重试。";
+      }
+      switch (e.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.receiveTimeout:
+        case DioExceptionType.sendTimeout:
+          return "下载超时，请检查网络后重试。";
+        case DioExceptionType.connectionError:
+          return "无法连接更新服务器，请检查网络后重试。";
+        case DioExceptionType.cancel:
+          return "更新已取消。";
+        default:
+          return "下载更新包失败，请稍后重试。";
+      }
+    }
+    return "更新失败，请稍后重试。";
   }
 
   /// 选择 Windows 更新包：优先 zip（免安装覆盖），其次 msix。
