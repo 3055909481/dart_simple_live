@@ -462,140 +462,104 @@ class FollowUserPage extends GetView<FollowUserController> {
     );
   }
 
-  /// 紧凑筛选栏：全部 + 标签/状态/平台三个下拉，只占一行。
+  /// 一行式筛选合集：全部 + 标签组 + 状态组 + 平台组，横向可滚动。
+  /// 每一组都以"全部"开头，保证任何维度都能重置回匹配所有。
   Widget _buildTagPanelHeader(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final settings = AppSettingsController.instance;
 
-    Widget dropdown({
+    Widget chip({
       required String label,
-      required bool active,
-      required List<PopupMenuEntry<String>> items,
-      required void Function(String) onSelected,
+      required bool selected,
+      required VoidCallback onTap,
     }) {
-      final fg = active ? colorScheme.primary : colorScheme.onSurfaceVariant;
-      return PopupMenuButton<String>(
-        itemBuilder: (_) => items,
-        onSelected: onSelected,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(minWidth: 120),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: active
-                ? colorScheme.primaryContainer
-                : colorScheme.surfaceContainerHighest.withAlpha(90),
-            borderRadius: AppStyle.radius24,
-            border: Border.all(
-              color: active
-                  ? colorScheme.primary.withAlpha(120)
-                  : colorScheme.outlineVariant.withAlpha(80),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(label, style: textTheme.bodySmall?.copyWith(color: fg)),
-              const SizedBox(width: 3),
-              Icon(Icons.keyboard_arrow_down, size: 14, color: fg),
-            ],
-          ),
+      return Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: FilterButton(
+          text: label,
+          selected: selected,
+          onTap: onTap,
         ),
       );
     }
 
-    PopupMenuEntry<String> groupItem(FollowGroupOption o) => PopupMenuItem<String>(
-          value: o.id,
-          child: Text(o.title),
+    Widget groupLabel(String title) => Padding(
+          padding: const EdgeInsets.only(right: 8, left: 4),
+          child: Center(
+            child: Text(
+              title,
+              style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ),
         );
 
     final isAllTag =
         controller.selectedTagId.value == FollowUserController.allTagId;
     final isAllGroup = controller.selectedGroupId.value == "all";
-    final statusActive = controller.groupMode.value ==
-            FollowGroupMode.liveStatus &&
-        !isAllGroup;
-    final platformActive =
-        controller.groupMode.value == FollowGroupMode.platform && !isAllGroup;
+    final isStatusMode =
+        controller.groupMode.value == FollowGroupMode.liveStatus;
+    final children = <Widget>[];
 
-    Widget allButton = FilterButton(
-      text: "全部",
-      selected: isAllTag && isAllGroup,
-      onTap: () {
-        controller.setSelectedTag(controller.filterTagOptions.first);
-        controller.setGroupFilter(FollowGroupMode.liveStatus, "all");
-      },
+    // 全局全部
+    children.add(
+      chip(
+        label: "全部",
+        selected: isAllTag && isAllGroup,
+        onTap: () {
+          controller.setSelectedTag(controller.filterTagOptions.first);
+          controller.setGroupFilter(FollowGroupMode.liveStatus, "all");
+        },
+      ),
     );
 
-    final tagLabel = isAllTag ? "标签" : controller.selectedTagName;
-    final statusLabel = statusActive
-        ? controller.statusGroupOptions
-            .firstWhere(
-              (o) => o.id == controller.selectedGroupId.value,
-              orElse: () => controller.statusGroupOptions.first,
-            )
-            .title
-        : "状态";
-    final platformLabel = platformActive
-        ? controller.platformGroupOptions
-            .firstWhere(
-              (o) => o.id == controller.selectedGroupId.value,
-              orElse: () => controller.platformGroupOptions.first,
-            )
-            .title
-        : "平台";
+    // 标签组（含"全部"标签）
+    children.add(groupLabel("标签"));
+    for (final tag in controller.filterTagOptions) {
+      final selected = controller.selectedTagId.value == tag.id;
+      children.add(
+        chip(
+          label: tag.tag,
+          selected: selected,
+          onTap: () => controller.setSelectedTag(tag),
+        ),
+      );
+    }
+
+    // 状态组（含"全部"）
+    children.add(groupLabel("状态"));
+    for (final o in controller.statusGroupOptions) {
+      final selected = isStatusMode && controller.selectedGroupId.value == o.id;
+      children.add(
+        chip(
+          label: o.title,
+          selected: selected,
+          onTap: () =>
+              controller.setGroupFilter(FollowGroupMode.liveStatus, o.id),
+        ),
+      );
+    }
+
+    // 平台组（含"全部"）
+    children.add(groupLabel("平台"));
+    for (final o in controller.platformGroupOptions) {
+      final selected = !isStatusMode && controller.selectedGroupId.value == o.id;
+      children.add(
+        chip(
+          label: o.title,
+          selected: selected,
+          onTap: () =>
+              controller.setGroupFilter(FollowGroupMode.platform, o.id),
+        ),
+      );
+    }
 
     return Padding(
       padding: AppStyle.edgeInsetsH8.copyWith(top: 4, bottom: 4),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            allButton,
-            const SizedBox(width: 8),
-            dropdown(
-              label: tagLabel,
-              active: !isAllTag,
-              items: controller.filterTagOptions
-                  .map(
-                    (t) => PopupMenuItem<String>(
-                      value: t.id,
-                      child: Text(t.tag),
-                    ),
-                  )
-                  .toList(),
-              onSelected: (id) {
-                final tag = controller.filterTagOptions.firstWhere(
-                  (t) => t.id == id,
-                  orElse: () => controller.filterTagOptions.first,
-                );
-                controller.setSelectedTag(tag);
-              },
-            ),
-            const SizedBox(width: 8),
-            dropdown(
-              label: statusLabel,
-              active: statusActive,
-              items: controller.statusGroupOptions.map(groupItem).toList(),
-              onSelected: (id) =>
-                  controller.setGroupFilter(FollowGroupMode.liveStatus, id),
-            ),
-            const SizedBox(width: 8),
-            dropdown(
-              label: platformLabel,
-              active: platformActive,
-              items: controller.platformGroupOptions.map(groupItem).toList(),
-              onSelected: (id) =>
-                  controller.setGroupFilter(FollowGroupMode.platform, id),
-            ),
-            if (settings.followOnlyLive.value ||
-                settings.followRefreshOnEnter.value) ...[
-              const SizedBox(width: 8),
-              Icon(Icons.tune, size: 14, color: colorScheme.primary),
-            ],
-          ],
-        ),
+        child: Row(children: children),
       ),
     );
   }
