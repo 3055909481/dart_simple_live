@@ -417,9 +417,6 @@ class FollowUserController extends BasePageController<FollowUser> {
 
   List<FollowUser> _buildFilteredList() {
     Iterable<FollowUser> items = _filterBySelectedGroup();
-    if (AppSettingsController.instance.followOnlyLive.value) {
-      items = items.where((item) => item.liveStatus.value == 2);
-    }
     final keyword = searchKeyword.value.trim().toLowerCase();
     if (keyword.isNotEmpty) {
       items = items.where(

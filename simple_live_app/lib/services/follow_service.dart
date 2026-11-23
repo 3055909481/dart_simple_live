@@ -263,6 +263,11 @@ class FollowService extends GetxService {
   /// 实际瞬时并发仍由全局 semaphore 按总线程数兜底。
   int _concurrencyForSite(String siteId, int totalConcurrency) {
     if (siteId == Constant.kDouyin) {
+      final manual =
+          AppSettingsController.instance.effectiveDouyinFollowThreadCount;
+      if (manual > 0) {
+        return manual;
+      }
       return totalConcurrency.clamp(1, 2).toInt();
     }
     return totalConcurrency < 1 ? 1 : totalConcurrency;

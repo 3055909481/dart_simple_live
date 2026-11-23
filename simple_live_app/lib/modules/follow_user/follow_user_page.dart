@@ -400,15 +400,7 @@ class FollowUserPage extends GetView<FollowUserController> {
         ),
       );
     }
-    // 这两个开关开启时常驻可关，避免折叠面板里的提示文本只能看不能操作。
-    if (settings.followOnlyLive.value) {
-      chips.add(
-        InputChip(
-          label: const Text("仅显示开播"),
-          onDeleted: () => controller.setOnlyLive(false),
-        ),
-      );
-    }
+    // 开关开启时常驻可关，避免折叠面板里的提示文本只能看不能操作。
     if (settings.followRefreshOnEnter.value) {
       chips.add(
         InputChip(
@@ -462,37 +454,53 @@ class FollowUserPage extends GetView<FollowUserController> {
     );
   }
 
-  /// 一行式筛选合集：全部 + 标签组 + 状态组 + 平台组，横向可滚动。
-  /// 每一组都以"全部"开头，保证任何维度都能重置回匹配所有。
+  /// 一行式筛选栏：全部 + 标签/状态/平台三个下拉按钮。
+  /// 选中的具体项显示在按钮上并高亮，样式参考斗鱼分区下拉。
   Widget _buildTagPanelHeader(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    Widget chip({
+    /// 下拉按钮：active=true 时高亮（选了具体项）。
+    Widget dropdown({
       required String label,
-      required bool selected,
-      required VoidCallback onTap,
+      required bool active,
+      required List<PopupMenuEntry<String>> items,
+      required void Function(String) onSelected,
     }) {
+      final fg = active ? colorScheme.onPrimary : colorScheme.onSurfaceVariant;
       return Padding(
         padding: const EdgeInsets.only(right: 8),
-        child: FilterButton(
-          text: label,
-          selected: selected,
-          onTap: onTap,
+        child: PopupMenuButton<String>(
+          itemBuilder: (_) => items,
+          onSelected: onSelected,
+          padding: EdgeInsets.zero,
+          offset: const Offset(0, 40),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            decoration: BoxDecoration(
+              color: active ? colorScheme.primary : colorScheme.surfaceContainerHighest,
+              borderRadius: AppStyle.radius24,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label, style: textTheme.bodySmall?.copyWith(color: fg)),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.keyboard_arrow_down,
+                  size: 14,
+                  color: fg,
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }
 
-    Widget groupLabel(String title) => Padding(
-          padding: const EdgeInsets.only(right: 8, left: 4),
-          child: Center(
-            child: Text(
-              title,
-              style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ),
+    PopupMenuEntry<String> menuItem(FollowGroupOption o) => PopupMenuItem<String>(
+          value: o.id,
+          child: Text(o.title),
         );
 
     final isAllTag =
@@ -500,66 +508,81 @@ class FollowUserPage extends GetView<FollowUserController> {
     final isAllGroup = controller.selectedGroupId.value == "all";
     final isStatusMode =
         controller.groupMode.value == FollowGroupMode.liveStatus;
-    final children = <Widget>[];
 
-    // 全局全部
-    children.add(
-      chip(
-        label: "全部",
-        selected: isAllTag && isAllGroup,
-        onTap: () {
-          controller.setSelectedTag(controller.filterTagOptions.first);
-          controller.setGroupFilter(FollowGroupMode.liveStatus, "all");
-        },
-      ),
-    );
-
-    // 标签组（含"全部"标签）
-    children.add(groupLabel("标签"));
-    for (final tag in controller.filterTagOptions) {
-      final selected = controller.selectedTagId.value == tag.id;
-      children.add(
-        chip(
-          label: tag.tag,
-          selected: selected,
-          onTap: () => controller.setSelectedTag(tag),
-        ),
-      );
-    }
-
-    // 状态组（含"全部"）
-    children.add(groupLabel("状态"));
-    for (final o in controller.statusGroupOptions) {
-      final selected = isStatusMode && controller.selectedGroupId.value == o.id;
-      children.add(
-        chip(
-          label: o.title,
-          selected: selected,
-          onTap: () =>
-              controller.setGroupFilter(FollowGroupMode.liveStatus, o.id),
-        ),
-      );
-    }
-
-    // 平台组（含"全部"）
-    children.add(groupLabel("平台"));
-    for (final o in controller.platformGroupOptions) {
-      final selected = !isStatusMode && controller.selectedGroupId.value == o.id;
-      children.add(
-        chip(
-          label: o.title,
-          selected: selected,
-          onTap: () =>
-              controller.setGroupFilter(FollowGroupMode.platform, o.id),
-        ),
-      );
-    }
+    // 每个按钮显示当前选中项名称；未选具体项时显示分类名。
+    final tagLabel = isAllTag
+        ? "标签"
+        : controller.selectedTagName;
+    final statusLabel = (isStatusMode && !isAllGroup)
+        ? controller.statusGroupOptions
+            .firstWhere(
+              (o) => o.id == controller.selectedGroupId.value,
+              orElse: () => controller.statusGroupOptions.first,
+            )
+            .title
+        : "状态";
+    final platformLabel = (!isStatusMode && !isAllGroup)
+        ? controller.platformGroupOptions
+            .firstWhere(
+              (o) => o.id == controller.selectedGroupId.value,
+              orElse: () => controller.platformGroupOptions.first,
+            )
+            .title
+        : "平台";
 
     return Padding(
       padding: AppStyle.edgeInsetsH8.copyWith(top: 4, bottom: 4),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(children: children),
+        child: Row(
+          children: [
+            // 全部按钮
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterButton(
+                text: "全部",
+                selected: isAllTag && isAllGroup,
+                onTap: () {
+                  controller.setSelectedTag(controller.filterTagOptions.first);
+                  controller.setGroupFilter(FollowGroupMode.liveStatus, "all");
+                },
+              ),
+            ),
+            dropdown(
+              label: tagLabel,
+              active: !isAllTag,
+              items: controller.filterTagOptions
+                  .map(
+                    (t) => PopupMenuItem<String>(
+                      value: t.id,
+                      child: Text(t.tag),
+                    ),
+                  )
+                  .toList(),
+              onSelected: (id) {
+                final tag = controller.filterTagOptions.firstWhere(
+                  (t) => t.id == id,
+                  orElse: () => controller.filterTagOptions.first,
+                );
+                controller.setSelectedTag(tag);
+              },
+            ),
+            dropdown(
+              label: statusLabel,
+              active: isStatusMode && !isAllGroup,
+              items: controller.statusGroupOptions.map(menuItem).toList(),
+              onSelected: (id) =>
+                  controller.setGroupFilter(FollowGroupMode.liveStatus, id),
+            ),
+            dropdown(
+              label: platformLabel,
+              active: !isStatusMode && !isAllGroup,
+              items: controller.platformGroupOptions.map(menuItem).toList(),
+              onSelected: (id) =>
+                  controller.setGroupFilter(FollowGroupMode.platform, id),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -656,13 +679,6 @@ class FollowUserPage extends GetView<FollowUserController> {
                   const SizedBox(height: 8),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text("仅显示开播"),
-                    subtitle: const Text("在当前平台/状态分组结果上再只保留已开播主播"),
-                    value: settings.followOnlyLive.value,
-                    onChanged: controller.setOnlyLive,
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
                     title: const Text("进入关注页后自动刷新"),
                     subtitle: const Text("先显示本地列表，再异步全量刷新；关注过多时极易触发抖音限制"),
                     value: settings.followRefreshOnEnter.value,
@@ -750,7 +766,7 @@ class FollowUserPage extends GetView<FollowUserController> {
     );
   }
 
-  /// 底部状态栏式刷新进度：贴底细条，刷新时才出现，尽量不挡视线。
+  /// 底部状态栏式刷新进度：细长条，文字居中嵌在进度条内，占比和谐。
   Widget _buildRefreshStatusBar(BuildContext context) {
     final progress = FollowService.instance.refreshProgress.value;
     if (!progress.active) {
@@ -760,50 +776,43 @@ class FollowUserPage extends GetView<FollowUserController> {
     final bottomPad = controller.paginationEnabled.value
         ? (Platform.isAndroid || Platform.isIOS ? 64.0 : 70.0)
         : (Platform.isAndroid || Platform.isIOS ? 12.0 : 16.0);
+    final percent = progress.total > 0 ? progress.percent : 0.0;
+
     return Positioned(
       left: 16,
       right: 16,
       bottom: bottomPad,
       child: IgnorePointer(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withAlpha(210),
+        child: SizedBox(
+          height: 22,
+          child: ClipRRect(
             borderRadius: AppStyle.radius24,
-            border: Border.all(color: colorScheme.outlineVariant.withAlpha(60)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 12,
-                    height: 12,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  AppStyle.hGap8,
-                  Flexible(
-                    child: Text(
-                      "${progress.stage} ${progress.resolvedCount}/${progress.total}",
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              ClipRRect(
-                borderRadius: AppStyle.radius24,
-                child: LinearProgressIndicator(
-                  value: progress.total > 0 ? progress.percent : null,
-                  minHeight: 2,
+            child: Stack(
+              children: [
+                // 底层：进度填充
+                Positioned.fill(
+                  child: Container(color: colorScheme.surfaceContainerHighest),
                 ),
-              ),
-            ],
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: percent.clamp(0.0, 1.0).toDouble(),
+                    child: Container(color: colorScheme.primaryContainer),
+                  ),
+                ),
+                // 文字居中嵌在条内
+                Center(
+                  child: Text(
+                    "${progress.stage} ${(percent * 100).toStringAsFixed(0)}%",
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 11,
+                        ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

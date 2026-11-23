@@ -410,6 +410,12 @@ class AppSettingsController extends GetxController {
         0,
       ),
     );
+    douyinFollowThreadCount.value = _normalizeDouyinThreadCount(
+      LocalStorageService.instance.getValue(
+        LocalStorageService.kDouyinFollowThreadCount,
+        0,
+      ),
+    );
     followPageSize.value = _normalizeFollowPageSize(
       LocalStorageService.instance.getValue(
         LocalStorageService.kFollowPageSize,
@@ -3079,6 +3085,21 @@ class AppSettingsController extends GetxController {
     updateFollowThreadCount.value = value;
     LocalStorageService.instance
         .setValue(LocalStorageService.kUpdateFollowThreadCount, value);
+  }
+
+  /// 抖音专属并发数：0=自动（按总数压到最多2），1-4 手动指定。
+  var douyinFollowThreadCount = 0.obs;
+  int get effectiveDouyinFollowThreadCount =>
+      _normalizeDouyinThreadCount(douyinFollowThreadCount.value);
+  int _normalizeDouyinThreadCount(int value) {
+    return value.clamp(0, 4).toInt();
+  }
+
+  void setDouyinFollowThreadCount(int e) {
+    final value = _normalizeDouyinThreadCount(e);
+    douyinFollowThreadCount.value = value;
+    LocalStorageService.instance
+        .setValue(LocalStorageService.kDouyinFollowThreadCount, value);
   }
 
   static const int kFollowPageSizeDefault = 200;
