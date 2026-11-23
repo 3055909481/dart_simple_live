@@ -33,6 +33,7 @@ class OtherSettingsController extends BaseController {
     if (audioDevicesLoaded.value) return;
     final devices = await AudioDeviceService.instance.detectDevices();
     audioDevices.assignAll(devices);
+    AudioDeviceService.instance.pruneInvalidDevices(devices);
     audioDevicesLoaded.value = true;
   }
 
@@ -117,6 +118,9 @@ class OtherSettingsController extends BaseController {
   @override
   void onInit() {
     loadLogFiles();
+    if (AudioDeviceService.supported) {
+      unawaited(loadAudioDevices());
+    }
     super.onInit();
   }
 

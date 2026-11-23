@@ -223,7 +223,6 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                   Obx(
                     () {
                       if (!controller.audioDevicesLoaded.value) {
-                        controller.loadAudioDevices();
                         return const SizedBox(
                           height: 48,
                           child: Center(

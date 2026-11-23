@@ -41,7 +41,7 @@ class SettingsMenu<T> extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            valueMap[value]!.tr,
+            (valueMap[value] ?? "未设置").tr,
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium!

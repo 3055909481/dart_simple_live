@@ -82,6 +82,29 @@ class AudioDeviceService extends GetxService {
     }
   }
 
+  /// 清理已失效的设备配置：设备列表变化后，旧的 id 可能已不存在。
+  /// 全局值失效回退到 auto；平台/直播间失效则移除（回到跟随上级）。
+  void pruneInvalidDevices(List<AudioOutputDevice> available) {
+    final validIds = available.map((d) => d.id).toSet();
+    if (!validIds.contains(globalDeviceId.value)) {
+      setGlobal(AudioOutputDevice.auto.id);
+    }
+    final invalidSites = siteDevices.entries
+        .where((e) => !validIds.contains(e.value))
+        .map((e) => e.key)
+        .toList();
+    for (final key in invalidSites) {
+      setSite(key, AudioOutputDevice.inherit.id);
+    }
+    final invalidRooms = roomDevices.entries
+        .where((e) => !validIds.contains(e.value))
+        .map((e) => e.key)
+        .toList();
+    for (final key in invalidRooms) {
+      setRoom(key, AudioOutputDevice.inherit.id);
+    }
+  }
+
   void setGlobal(String deviceId) {
     globalDeviceId.value = deviceId;
     LocalStorageService.instance.setValue(
