@@ -332,46 +332,52 @@ class FollowUserController extends BasePageController<FollowUser> {
     return result;
   }
 
-  List<FollowGroupOption> get groupOptions {
+  /// 状态筛选选项（固定）
+  List<FollowGroupOption> get statusGroupOptions => const [
+        FollowGroupOption(id: "all", title: "全部"),
+        FollowGroupOption(id: "live", title: "直播中", liveStatus: 2),
+        FollowGroupOption(id: "not_live", title: "未开播", liveStatus: 1),
+      ];
+
+  /// 平台筛选选项（当前标签下实际存在的平台）
+  List<FollowGroupOption> get platformGroupOptions {
     final options = <FollowGroupOption>[
       const FollowGroupOption(id: "all", title: "全部"),
     ];
-    if (groupMode.value == FollowGroupMode.liveStatus) {
-      options.addAll(const [
-        FollowGroupOption(id: "live", title: "直播中", liveStatus: 2),
-        FollowGroupOption(id: "not_live", title: "未开播", liveStatus: 1),
-      ]);
-    } else {
-      final siteIds =
-          _buildSelectedTagList().map((item) => item.siteId).toSet().toList();
-      final siteSort = Sites.supportSites.map((site) => site.id).toList();
-      siteIds.sort((a, b) {
-        final aIndex = siteSort.indexOf(a);
-        final bIndex = siteSort.indexOf(b);
-        if (aIndex < 0 && bIndex < 0) {
-          return a.compareTo(b);
-        }
-        if (aIndex < 0) {
-          return 1;
-        }
-        if (bIndex < 0) {
-          return -1;
-        }
-        return aIndex.compareTo(bIndex);
-      });
-      for (final siteId in siteIds) {
-        final site = Sites.allSites[siteId];
-        options.add(
-          FollowGroupOption(
-            id: "site:$siteId",
-            title: site?.name ?? siteId,
-            siteId: siteId,
-          ),
-        );
+    final siteIds =
+        _buildSelectedTagList().map((item) => item.siteId).toSet().toList();
+    final siteSort = Sites.supportSites.map((site) => site.id).toList();
+    siteIds.sort((a, b) {
+      final aIndex = siteSort.indexOf(a);
+      final bIndex = siteSort.indexOf(b);
+      if (aIndex < 0 && bIndex < 0) {
+        return a.compareTo(b);
       }
+      if (aIndex < 0) {
+        return 1;
+      }
+      if (bIndex < 0) {
+        return -1;
+      }
+      return aIndex.compareTo(bIndex);
+    });
+    for (final siteId in siteIds) {
+      final site = Sites.allSites[siteId];
+      options.add(
+        FollowGroupOption(
+          id: "site:$siteId",
+          title: site?.name ?? siteId,
+          siteId: siteId,
+        ),
+      );
     }
     return options;
   }
+
+  List<FollowGroupOption> get groupOptions => groupMode.value ==
+          FollowGroupMode.liveStatus
+      ? statusGroupOptions
+      : platformGroupOptions;
 
   List<FollowUser> _filterBySelectedGroup() {
     FollowGroupOption? selected;
@@ -505,6 +511,16 @@ class FollowUserController extends BasePageController<FollowUser> {
   void setGroupOption(FollowGroupOption option) {
     selectedGroupId.value = option.id;
     _saveGroupSelection();
+    filterData();
+    _jumpToTop();
+  }
+
+  /// 一次设置分组模式与选项，避免切换模式时触发两次刷新。
+  void setGroupFilter(FollowGroupMode mode, String optionId) {
+    groupMode.value = mode;
+    selectedGroupId.value = optionId;
+    _saveGroupSelection();
+    currentDisplayPage.value = 1;
     filterData();
     _jumpToTop();
   }

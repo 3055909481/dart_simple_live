@@ -214,51 +214,6 @@ class FollowUserPage extends GetView<FollowUserController> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Obx(
-                () => Visibility(
-                  visible: controller.paginationEnabled.value,
-                  child: Padding(
-                    padding: AppStyle.edgeInsetsH8.copyWith(top: 6),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 14,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        AppStyle.hGap8,
-                        Expanded(
-                          child: Text(
-                            "分页刷新说明",
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () {
-                            SmartDialog.showToast(
-                              "当前页刷新只处理当前显示结果；刷新“${controller.refreshTagLabel}”会忽略搜索、平台和开播状态，只刷新该标签内的关注。",
-                            );
-                          },
-                          child: Text(
-                            "详情",
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Obx(
-                () => _buildRefreshProgress(context),
-              ),
-              Obx(
                 () => _buildActiveFilterBar(context),
               ),
               Expanded(
@@ -338,6 +293,10 @@ class FollowUserPage extends GetView<FollowUserController> {
                 ),
               ),
             ],
+          ),
+          // 底部状态栏式刷新进度：细条 + 小字，不遮挡内容视线
+          Obx(
+            () => _buildRefreshStatusBar(context),
           ),
           Obx(
             () => controller.paginationEnabled.value
@@ -503,201 +462,140 @@ class FollowUserPage extends GetView<FollowUserController> {
     );
   }
 
-  /// Sliver 头部：跟随列表自然滚动，高度由内容自适应，无硬编码估算。
+  /// 紧凑筛选栏：全部 + 标签/状态/平台三个下拉，只占一行。
   Widget _buildTagPanelHeader(BuildContext context) {
-    return Container(
-      margin: AppStyle.edgeInsetsH8.copyWith(top: 8, bottom: 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Colors.grey.withAlpha(50)
-            : Colors.white70,
-        borderRadius: AppStyle.radius12,
-        border: Border.all(color: Colors.grey.withAlpha(25)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: AppStyle.radius12),
-        clipBehavior: Clip.antiAlias,
-        child: Obx(() {
-          final expanded = controller.tagPanelExpanded.value;
-          final colorScheme = Theme.of(context).colorScheme;
-          final activeToggles = <String>[
-            if (AppSettingsController.instance.followOnlyLive.value)
-              "仅开播",
-            if (AppSettingsController.instance.followRefreshOnEnter.value)
-              "自动刷新",
-          ];
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final settings = AppSettingsController.instance;
+
+    Widget dropdown({
+      required String label,
+      required bool active,
+      required List<PopupMenuEntry<String>> items,
+      required void Function(String) onSelected,
+    }) {
+      final fg = active ? colorScheme.primary : colorScheme.onSurfaceVariant;
+      return PopupMenuButton<String>(
+        itemBuilder: (_) => items,
+        onSelected: onSelected,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 120),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: active
+                ? colorScheme.primaryContainer
+                : colorScheme.surfaceContainerHighest.withAlpha(90),
+            borderRadius: AppStyle.radius24,
+            border: Border.all(
+              color: active
+                  ? colorScheme.primary.withAlpha(120)
+                  : colorScheme.outlineVariant.withAlpha(80),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              InkWell(
-                onTap: controller.toggleTagPanel,
-                child: Padding(
-                  padding: AppStyle.edgeInsetsH12.copyWith(top: 8, bottom: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.sell_outlined,
-                              size: 18,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            AppStyle.hGap8,
-                            Text(
-                              "标签",
-                              style: Theme.of(context).textTheme.labelLarge,
-                            ),
-                            if (!expanded) ...[
-                              AppStyle.hGap8,
-                              Flexible(
-                                flex: 1,
-                                child: Container(
-                                  padding: AppStyle.edgeInsetsH8.copyWith(
-                                    top: 2,
-                                    bottom: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surface,
-                                    borderRadius: AppStyle.radius24,
-                                    border: Border.all(
-                                      color: colorScheme.outlineVariant,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    controller.selectedTagName,
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      if (activeToggles.isNotEmpty) ...[
-                        AppStyle.hGap8,
-                        Flexible(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Icon(
-                                Icons.tune,
-                                size: 14,
-                                color: colorScheme.primary,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  activeToggles.join(" · "),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.right,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      AppStyle.hGap8,
-                      Text(
-                        expanded ? "收起" : "展开",
-                        style: Theme.of(context).textTheme.bodySmall
-                            ?.copyWith(color: colorScheme.primary),
-                      ),
-                      Icon(
-                        expanded
-                            ? Icons.keyboard_arrow_up
-                            : Icons.keyboard_arrow_down,
-                        size: 20,
-                        color: colorScheme.primary,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              AnimatedSize(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.topCenter,
-                child: expanded
-                    ? Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _buildFilterRow(
-                              context,
-                              label: "标签",
-                              children: controller.filterTagOptions.map((tag) {
-                                return FilterButton(
-                                  text: tag.tag,
-                                  selected:
-                                      controller.selectedTagId.value == tag.id,
-                                  onTap: () => controller.setSelectedTag(tag),
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 10),
-                            _buildFilterRow(
-                              context,
-                              label: "分组",
-                              children: [
-                                ChoiceChip(
-                                  label: const Text("按状态"),
-                                  selected: controller.groupMode.value ==
-                                      FollowGroupMode.liveStatus,
-                                  onSelected: (_) {
-                                    controller.setGroupMode(
-                                      FollowGroupMode.liveStatus,
-                                    );
-                                  },
-                                ),
-                                AppStyle.hGap8,
-                                ChoiceChip(
-                                  label: const Text("按平台"),
-                                  selected: controller.groupMode.value ==
-                                      FollowGroupMode.platform,
-                                  onSelected: (_) {
-                                    controller.setGroupMode(
-                                      FollowGroupMode.platform,
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            _buildFilterRow(
-                              context,
-                              label: "状态",
-                              children:
-                                  controller.groupOptions.map((option) {
-                                return FilterButton(
-                                  text: option.title,
-                                  selected:
-                                      controller.selectedGroupId.value ==
-                                          option.id,
-                                  onTap: () {
-                                    controller.setGroupOption(option);
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
+              Text(label, style: textTheme.bodySmall?.copyWith(color: fg)),
+              const SizedBox(width: 3),
+              Icon(Icons.keyboard_arrow_down, size: 14, color: fg),
             ],
-          );
-        }),
+          ),
+        ),
+      );
+    }
+
+    PopupMenuEntry<String> groupItem(FollowGroupOption o) => PopupMenuItem<String>(
+          value: o.id,
+          child: Text(o.title),
+        );
+
+    final isAllTag =
+        controller.selectedTagId.value == FollowUserController.allTagId;
+    final isAllGroup = controller.selectedGroupId.value == "all";
+    final statusActive = controller.groupMode.value ==
+            FollowGroupMode.liveStatus &&
+        !isAllGroup;
+    final platformActive =
+        controller.groupMode.value == FollowGroupMode.platform && !isAllGroup;
+
+    Widget allButton = FilterButton(
+      text: "全部",
+      selected: isAllTag && isAllGroup,
+      onTap: () {
+        controller.setSelectedTag(controller.filterTagOptions.first);
+        controller.setGroupFilter(FollowGroupMode.liveStatus, "all");
+      },
+    );
+
+    final tagLabel = isAllTag ? "标签" : controller.selectedTagName;
+    final statusLabel = statusActive
+        ? controller.statusGroupOptions
+            .firstWhere(
+              (o) => o.id == controller.selectedGroupId.value,
+              orElse: () => controller.statusGroupOptions.first,
+            )
+            .title
+        : "状态";
+    final platformLabel = platformActive
+        ? controller.platformGroupOptions
+            .firstWhere(
+              (o) => o.id == controller.selectedGroupId.value,
+              orElse: () => controller.platformGroupOptions.first,
+            )
+            .title
+        : "平台";
+
+    return Padding(
+      padding: AppStyle.edgeInsetsH8.copyWith(top: 4, bottom: 4),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            allButton,
+            const SizedBox(width: 8),
+            dropdown(
+              label: tagLabel,
+              active: !isAllTag,
+              items: controller.filterTagOptions
+                  .map(
+                    (t) => PopupMenuItem<String>(
+                      value: t.id,
+                      child: Text(t.tag),
+                    ),
+                  )
+                  .toList(),
+              onSelected: (id) {
+                final tag = controller.filterTagOptions.firstWhere(
+                  (t) => t.id == id,
+                  orElse: () => controller.filterTagOptions.first,
+                );
+                controller.setSelectedTag(tag);
+              },
+            ),
+            const SizedBox(width: 8),
+            dropdown(
+              label: statusLabel,
+              active: statusActive,
+              items: controller.statusGroupOptions.map(groupItem).toList(),
+              onSelected: (id) =>
+                  controller.setGroupFilter(FollowGroupMode.liveStatus, id),
+            ),
+            const SizedBox(width: 8),
+            dropdown(
+              label: platformLabel,
+              active: platformActive,
+              items: controller.platformGroupOptions.map(groupItem).toList(),
+              onSelected: (id) =>
+                  controller.setGroupFilter(FollowGroupMode.platform, id),
+            ),
+            if (settings.followOnlyLive.value ||
+                settings.followRefreshOnEnter.value) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.tune, size: 14, color: colorScheme.primary),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -888,46 +786,58 @@ class FollowUserPage extends GetView<FollowUserController> {
     );
   }
 
-  Widget _buildRefreshProgress(BuildContext context) {
+  /// 底部状态栏式刷新进度：贴底细条，刷新时才出现，尽量不挡视线。
+  Widget _buildRefreshStatusBar(BuildContext context) {
     final progress = FollowService.instance.refreshProgress.value;
     if (!progress.active) {
       return const SizedBox.shrink();
     }
     final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: AppStyle.edgeInsetsH8.copyWith(top: 4, bottom: 4),
-      child: Material(
-        color: colorScheme.surfaceContainerHighest.withAlpha(
-          progress.automatic ? 180 : 220,
-        ),
-        borderRadius: AppStyle.radius8,
-        child: Padding(
-          padding: AppStyle.edgeInsetsA12,
+    final bottomPad = controller.paginationEnabled.value
+        ? (Platform.isAndroid || Platform.isIOS ? 64.0 : 70.0)
+        : (Platform.isAndroid || Platform.isIOS ? 12.0 : 16.0);
+    return Positioned(
+      left: 16,
+      right: 16,
+      bottom: bottomPad,
+      child: IgnorePointer(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest.withAlpha(210),
+            borderRadius: AppStyle.radius24,
+            border: Border.all(color: colorScheme.outlineVariant.withAlpha(60)),
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  AppStyle.hGap8,
+                  Flexible(
                     child: Text(
-                      progress.stage,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      "${progress.stage} ${progress.resolvedCount}/${progress.total}",
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Text("${progress.resolvedCount}/${progress.total}"),
                 ],
               ),
-              if (progress.detail.isNotEmpty) ...[
-                AppStyle.vGap4,
-                Text(
-                  progress.detail,
-                  style: Theme.of(context).textTheme.bodySmall,
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: AppStyle.radius24,
+                child: LinearProgressIndicator(
+                  value: progress.total > 0 ? progress.percent : null,
+                  minHeight: 2,
                 ),
-              ],
-              AppStyle.vGap8,
-              LinearProgressIndicator(
-                value: progress.total > 0 ? progress.percent : null,
-                minHeight: 6,
               ),
             ],
           ),
