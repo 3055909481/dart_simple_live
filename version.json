@@ -1,13 +1,13 @@
 {
-  "version": "1.0.4",
-  "tag": "v1.0.4",
-  "notes": "## v1.0.4 更新说明\n\n- 关注设置新增「抖音并发线程数」独立配置（自动 / 1-4）\n- 关注页筛选栏改为下拉按钮：标签/状态/平台，选中项高亮显示\n- 移除冗余的「仅显示开播」开关（用状态组的「直播中」即可）\n- 刷新进度条改为细长条，进度百分比嵌在条内，更省空间\n- 修复 Windows 自动更新下载 404 问题（v1.0.3 已修复，仍需手动升级一次）",
+  "version": "1.0.5",
+  "tag": "v1.0.5",
+  "notes": "## v1.0.5 更新说明\n\n- 新增声音输出设备选择（桌面端）：支持全局配置 / 平台配置 / 直播间配置三级，就近优先\n- 修复关注页状态、标签、平台三个筛选无法同时选择的问题\n- 直播间切换输出设备会立即生效并记住，下次进入沿用",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.4+10004-windows.zip",
-      "msix": "simple_live_app-1.0.4+10004-windows.msix"
+      "zip": "simple_live_app-1.0.5+10005-windows.zip",
+      "msix": "simple_live_app-1.0.5+10005-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.4"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.5"
 }
