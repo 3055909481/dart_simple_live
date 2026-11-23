@@ -217,10 +217,40 @@ class FollowUserPage extends GetView<FollowUserController> {
                 () => Visibility(
                   visible: controller.paginationEnabled.value,
                   child: Padding(
-                    padding: AppStyle.edgeInsetsH8.copyWith(top: 8),
-                    child: Text(
-                      "当前页刷新只处理当前显示结果；刷新“${controller.refreshTagLabel}”会忽略搜索、平台和开播状态，只刷新该标签内的关注。",
-                      style: Theme.of(context).textTheme.bodySmall,
+                    padding: AppStyle.edgeInsetsH8.copyWith(top: 6),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 14,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        AppStyle.hGap8,
+                        Expanded(
+                          child: Text(
+                            "分页刷新说明",
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () {
+                            SmartDialog.showToast(
+                              "当前页刷新只处理当前显示结果；刷新“${controller.refreshTagLabel}”会忽略搜索、平台和开播状态，只刷新该标签内的关注。",
+                            );
+                          },
+                          child: Text(
+                            "详情",
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -441,6 +471,38 @@ class FollowUserPage extends GetView<FollowUserController> {
     );
   }
 
+  /// 筛选面板中的一行：左侧固定分类标签，右侧控件自动换行。
+  /// 用 Wrap 代替 SingleChildScrollView，避免横向滚动与换行冲突导致按钮错位。
+  Widget _buildFilterRow(
+    BuildContext context, {
+    required String label,
+    required List<Widget> children,
+  }) {
+    final labelStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        );
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 44,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(label, style: labelStyle),
+          ),
+        ),
+        Expanded(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: children,
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Sliver 头部：跟随列表自然滚动，高度由内容自适应，无硬编码估算。
   Widget _buildTagPanelHeader(BuildContext context) {
     return Container(
@@ -571,23 +633,22 @@ class FollowUserPage extends GetView<FollowUserController> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Wrap(
-                                spacing: 12,
-                                children:
-                                    controller.filterTagOptions.map((tag) {
-                                  return FilterButton(
-                                    text: tag.tag,
-                                    selected:
-                                        controller.selectedTagId.value == tag.id,
-                                    onTap: () => controller.setSelectedTag(tag),
-                                  );
-                                }).toList(),
-                              ),
+                            _buildFilterRow(
+                              context,
+                              label: "标签",
+                              children: controller.filterTagOptions.map((tag) {
+                                return FilterButton(
+                                  text: tag.tag,
+                                  selected:
+                                      controller.selectedTagId.value == tag.id,
+                                  onTap: () => controller.setSelectedTag(tag),
+                                );
+                              }).toList(),
                             ),
-                            const SizedBox(height: 8),
-                            Row(
+                            const SizedBox(height: 10),
+                            _buildFilterRow(
+                              context,
+                              label: "分组",
                               children: [
                                 ChoiceChip(
                                   label: const Text("按状态"),
@@ -612,24 +673,22 @@ class FollowUserPage extends GetView<FollowUserController> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Wrap(
-                                spacing: 12,
-                                children:
-                                    controller.groupOptions.map((option) {
-                                  return FilterButton(
-                                    text: option.title,
-                                    selected:
-                                        controller.selectedGroupId.value ==
-                                            option.id,
-                                    onTap: () {
-                                      controller.setGroupOption(option);
-                                    },
-                                  );
-                                }).toList(),
-                              ),
+                            const SizedBox(height: 10),
+                            _buildFilterRow(
+                              context,
+                              label: "状态",
+                              children:
+                                  controller.groupOptions.map((option) {
+                                return FilterButton(
+                                  text: option.title,
+                                  selected:
+                                      controller.selectedGroupId.value ==
+                                          option.id,
+                                  onTap: () {
+                                    controller.setGroupOption(option);
+                                  },
+                                );
+                              }).toList(),
                             ),
                           ],
                         ),
