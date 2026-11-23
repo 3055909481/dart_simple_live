@@ -2831,16 +2831,21 @@ class LiveRoomController extends PlayerController
       return;
     }
     var id = "${site.id}_$roomId";
-    DBService.instance.addFollow(
-      FollowUser(
-        id: id,
-        roomId: roomId,
-        siteId: site.id,
-        userName: detail.value?.userName ?? "",
-        face: detail.value?.userAvatar ?? "",
-        addTime: DateTime.now(),
-      ),
+    // 已有直播间详情，直接写入当前开播状态，避免新关注的项在下次
+    // 定时刷新前一直显示"未知"（也避免为此触发一次全量状态刷新）。
+    final currentDetail = detail.value!;
+    final isLiving = currentDetail.status || currentDetail.isRecord;
+    final newFollow = FollowUser(
+      id: id,
+      roomId: roomId,
+      siteId: site.id,
+      userName: currentDetail.userName,
+      face: currentDetail.userAvatar,
+      addTime: DateTime.now(),
     );
+    newFollow.liveStatus.value = isLiving ? 2 : 1;
+    newFollow.liveStartTime = isLiving ? currentDetail.showTime : null;
+    DBService.instance.addFollow(newFollow);
     followed.value = true;
     EventBus.instance.emit(Constant.kUpdateFollow, id);
   }

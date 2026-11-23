@@ -258,6 +258,16 @@ class FollowService extends GetxService {
     return manual > 0 ? "手动($manual)" : "自动";
   }
 
+  /// 单个平台的 worker 数。
+  /// 抖音风控敏感，限制为最多 2 并发；其他平台可用满总线程数。
+  /// 实际瞬时并发仍由全局 semaphore 按总线程数兜底。
+  int _concurrencyForSite(String siteId, int totalConcurrency) {
+    if (siteId == Constant.kDouyin) {
+      return totalConcurrency.clamp(1, 2).toInt();
+    }
+    return totalConcurrency < 1 ? 1 : totalConcurrency;
+  }
+
   /// 按平台交错排列，避免单一平台阻塞
   List<FollowUser> interleaveByPlatform(List<FollowUser> list) {
     // 按平台分组
@@ -1076,8 +1086,6 @@ class FollowService extends GetxService {
       var failedCount = resumeTask ? resumedFailedCount : 0;
       var deferredCount = filteredTargets.deferredTargets.length;
       var limitedCount = 0;
-      var pausedForResume = false;
-      var autoResumeAttempt = 0;
 
       if (scope.includeAllNormals) {
         unawaited(
@@ -1131,97 +1139,155 @@ class FollowService extends GetxService {
 
       updateProgress(active: true, done: false);
 
-      while (pendingKeys.isNotEmpty) {
-        final taskQueue = Queue<FollowUser>.from(
-          pendingKeys.map((key) => targetByKey[key]).whereType<FollowUser>(),
-        );
-        pausedForResume = false;
+      // ===== 每平台独立队列 + 全局并发闸 =====
+      // 每个平台一个独立队列和 worker 池，抖音触发限流时只暂停抖音自己的队列，
+      // 不再用全局 pausedForResume 拖累其他平台。全局 semaphore 保证瞬时
+      // 并发总数不超过用户设置的线程数（含自动档）。
+      final semaphore = _FollowRefreshSemaphore(concurrency);
+      final sitePaused = <String, bool>{};
+      final siteResumeAttempt = <String, int>{};
 
-        Future<void> worker(int workerId) async {
-          while (taskQueue.isNotEmpty) {
-            if (generation != _updateGeneration || pausedForResume) {
+      Future<void> runSiteGroup(
+        String siteId,
+        DouyinFollowRefreshLimiter? limiter, {
+        required List<String> siteKeys,
+      }) async {
+        if (siteKeys.isEmpty) return;
+        final siteConcurrency = _concurrencyForSite(siteId, concurrency);
+        sitePaused[siteId] = false;
+
+        Future<void> siteWorker(int workerId) async {
+          while (siteKeys.isNotEmpty) {
+            if (generation != _updateGeneration || sitePaused[siteId] == true) {
               return;
             }
-            var item = taskQueue.removeFirst();
-            final result = await _updateLiveStatus(
-              item,
-              generation: generation,
-              douyinLimiter: douyinLimiter,
-              workerIndex: workerId,
-              pauseRemainingOnLimited: scope.includeAllNormals,
-            );
-            if (generation != _updateGeneration) {
-              return;
-            }
-            if (result.limited) {
-              limitedCount++;
-            }
-            final targetKey = _refreshTargetKey(item);
-            if (!result.keepPending) {
-              pendingKeys.remove(targetKey);
-            }
+            // 同步取任务（Dart 单线程，取任务过程无 await，天然原子）
+            final key = siteKeys.removeAt(0);
+            final item = targetByKey[key];
+            if (item == null) continue;
 
-            switch (result.outcome) {
-              case _FollowRefreshItemOutcome.success:
-                successCount++;
-                completed++;
-                break;
-              case _FollowRefreshItemOutcome.failed:
-                failedCount++;
-                completed++;
-                break;
-              case _FollowRefreshItemOutcome.deferred:
-              case _FollowRefreshItemOutcome.skipped:
-                break;
-            }
-            if (result.pauseRemaining) {
-              pausedForResume = true;
-              deferredCount =
-                  filteredTargets.deferredTargets.length + pendingKeys.length;
-            }
-            if (scope.includeAllNormals && !isHugeTask) {
-              unawaited(
-                _persistRefreshTask(
-                  scope: scope,
-                  total: targets.length,
-                  orderedKeys: orderedAllowedKeys,
-                  pendingKeys: pendingKeys,
-                  successCount: successCount,
-                  failedCount: failedCount,
-                  deferredCount: deferredCount,
-                ),
+            await semaphore.acquire();
+            try {
+              if (generation != _updateGeneration) {
+                return;
+              }
+              final result = await _updateLiveStatus(
+                item,
+                generation: generation,
+                douyinLimiter: limiter,
+                workerIndex: workerId,
+                pauseRemainingOnLimited: scope.includeAllNormals,
               );
-            }
-            if (!isHugeTask || completed % 20 == 0 || pendingKeys.isEmpty) {
-              updateProgress(active: true, done: false);
+              if (generation != _updateGeneration) {
+                return;
+              }
+              if (result.limited) {
+                limitedCount++;
+              }
+              if (!result.keepPending) {
+                pendingKeys.remove(key);
+              }
+
+              switch (result.outcome) {
+                case _FollowRefreshItemOutcome.success:
+                  successCount++;
+                  completed++;
+                  break;
+                case _FollowRefreshItemOutcome.failed:
+                  failedCount++;
+                  completed++;
+                  break;
+                case _FollowRefreshItemOutcome.deferred:
+                case _FollowRefreshItemOutcome.skipped:
+                  break;
+              }
+              if (result.pauseRemaining) {
+                // 只暂停本平台队列，其他平台 worker 不受影响。
+                sitePaused[siteId] = true;
+                deferredCount =
+                    filteredTargets.deferredTargets.length + pendingKeys.length;
+              }
+              if (scope.includeAllNormals && !isHugeTask) {
+                unawaited(
+                  _persistRefreshTask(
+                    scope: scope,
+                    total: targets.length,
+                    orderedKeys: orderedAllowedKeys,
+                    pendingKeys: pendingKeys,
+                    successCount: successCount,
+                    failedCount: failedCount,
+                    deferredCount: deferredCount,
+                  ),
+                );
+              }
+              if (!isHugeTask || completed % 20 == 0 || pendingKeys.isEmpty) {
+                updateProgress(active: true, done: false);
+              }
+            } finally {
+              semaphore.release();
             }
           }
         }
 
-        var workers = <Future>[];
-        for (var i = 0; i < concurrency; i++) {
-          workers.add(worker(i));
-        }
+        final workers = <Future>[
+          for (var i = 0; i < siteConcurrency; i++) siteWorker(i),
+        ];
         await Future.wait(workers);
+      }
+
+      while (pendingKeys.isNotEmpty) {
+        // 按平台把待处理项拆成独立队列。
+        final siteQueues = <String, List<String>>{};
+        for (final key in pendingKeys) {
+          final item = targetByKey[key];
+          if (item == null) continue;
+          siteQueues.putIfAbsent(item.siteId, () => <String>[]).add(key);
+        }
+        sitePaused.clear();
+        updateProgress(active: true, done: false);
+
+        // 所有平台队列并行跑；抖音用限流器，其余平台独立全速。
+        await Future.wait(
+          siteQueues.entries.map(
+            (entry) => runSiteGroup(
+              entry.key,
+              entry.key == Constant.kDouyin ? douyinLimiter : null,
+              siteKeys: entry.value,
+            ),
+          ),
+        );
 
         if (generation != _updateGeneration) {
           return;
         }
-        if (!pausedForResume || pendingKeys.isEmpty) {
+        // 找出本轮被限流暂停、且仍有剩余任务的平台。
+        final pausedSites = sitePaused.entries
+            .where((e) => e.value && (siteQueues[e.key] ?? const []).isNotEmpty)
+            .map((e) => e.key)
+            .toList();
+        if (pausedSites.isEmpty || !scope.includeAllNormals) {
           break;
         }
-        if (!scope.includeAllNormals ||
-            autoResumeAttempt >= kDouyinLimitedAutoResumeMaxAttempts) {
+
+        // 逐平台独立计算续刷次数与延迟，互不影响。
+        var shouldResume = false;
+        var maxDelay = Duration.zero;
+        for (final siteId in pausedSites) {
+          final attempt = (siteResumeAttempt[siteId] ?? 0) + 1;
+          if (attempt >= kDouyinLimitedAutoResumeMaxAttempts) continue;
+          siteResumeAttempt[siteId] = attempt;
+          final delay = _douyinLimitedAutoResumeDelay(attempt);
+          if (delay > maxDelay) maxDelay = delay;
+          shouldResume = true;
+          Log.w(
+            "$siteId 触发限流，${delay.inSeconds}s后单独续刷剩余任务 "
+            "scope=${scope.scopeKey} attempt=$attempt",
+          );
+        }
+        if (!shouldResume) {
           break;
         }
-        autoResumeAttempt++;
-        final resumeDelay = _douyinLimitedAutoResumeDelay(autoResumeAttempt);
-        Log.w(
-          "抖音刷新触发限流，${resumeDelay.inSeconds}s后自动续刷剩余${pendingKeys.length}项 "
-          "scope=${scope.scopeKey} attempt=$autoResumeAttempt",
-        );
-        updateProgress(active: true, done: false);
-        await Future.delayed(resumeDelay);
+        await Future.delayed(maxDelay);
         if (generation != _updateGeneration) {
           return;
         }
@@ -1624,6 +1690,38 @@ class _PersistedFollowRefreshTaskState {
       orderedKeys: readList(targets["orderedKeys"]),
       pendingKeys: readList(targets["pendingKeys"]),
     );
+  }
+}
+
+/// 全局并发闸：限制所有平台 worker 的瞬时请求总数。
+/// 基于 Completer 队列实现，Dart 单线程下无需额外锁。
+class _FollowRefreshSemaphore {
+  _FollowRefreshSemaphore(this.max) : assert(max > 0);
+
+  final int max;
+  int _active = 0;
+  final Queue<Completer<void>> _waiters = Queue<Completer<void>>();
+
+  Future<void> acquire() {
+    if (_active < max && _waiters.isEmpty) {
+      _active++;
+      return Future.value();
+    }
+    final completer = Completer<void>();
+    _waiters.add(completer);
+    return completer.future;
+  }
+
+  void release() {
+    if (_waiters.isNotEmpty) {
+      // 把名额直接交给等待者，_active 不变。
+      final next = _waiters.removeFirst();
+      if (!next.isCompleted) next.complete();
+      return;
+    }
+    if (_active > 0) {
+      _active--;
+    }
   }
 }
 
