@@ -165,6 +165,8 @@ class LocalStorageService extends GetxService {
   static const String kImportedMpvConfPath = "ImportedMpvConfPath";
   static const String kAutoUpdateFollowEnable = "AutoUpdateFollowEnable";
   static const String kUpdateFollowDuration = "AutoUpdateFollowDuration";
+  static const String kHoverPreviewEnable = "HoverPreviewEnable";
+  static const String kHoverPreviewDelay = "HoverPreviewDelaySeconds";
   static const String kUpdateFollowThreadCount = "UpdateFollowThreadCount";
   static const String kDouyinFollowThreadCount = "DouyinFollowThreadCount";
   static const String kFollowPageSize = "FollowPageSize";

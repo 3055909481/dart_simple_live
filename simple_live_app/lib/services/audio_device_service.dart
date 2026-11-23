@@ -14,10 +14,14 @@ class AudioOutputDevice {
 
   const AudioOutputDevice({required this.id, required this.name});
 
-  /// mpv 默认设备（auto），始终作为第一项。
-  static const auto = AudioOutputDevice(id: "auto", name: "默认设备");
+  /// 跟随系统默认设备（mpv 的 auto），始终作为第一项。
+  static const auto = AudioOutputDevice(id: "auto", name: "跟随 Windows 默认设备");
+
+  /// 跟随上级配置（仅平台/直播间层级使用，不传给 mpv）。
+  static const inherit = AudioOutputDevice(id: "__inherit__", name: "跟随上级配置");
 
   bool get isAuto => id == "auto";
+  bool get isInherit => id == "__inherit__";
 
   @override
   bool operator ==(Object other) =>
@@ -88,7 +92,7 @@ class AudioDeviceService extends GetxService {
 
   void setSite(String siteId, String deviceId) {
     final next = Map<String, String>.from(siteDevices);
-    if (deviceId == "auto") {
+    if (deviceId == AudioOutputDevice.inherit.id) {
       next.remove(siteId);
     } else {
       next[siteId] = deviceId;
@@ -102,7 +106,7 @@ class AudioDeviceService extends GetxService {
 
   void setRoom(String roomKey, String deviceId) {
     final next = Map<String, String>.from(roomDevices);
-    if (deviceId == "auto") {
+    if (deviceId == AudioOutputDevice.inherit.id) {
       next.remove(roomKey);
     } else {
       next[roomKey] = deviceId;
@@ -176,7 +180,8 @@ class AudioDeviceService extends GetxService {
           if (item is Map) {
             final name = item["name"]?.toString() ?? "";
             final desc = item["description"]?.toString() ?? name;
-            if (name.isNotEmpty && seen.add(name)) {
+            // mpv 自带的 auto 条目由我们自己的"跟随默认设备"代表，跳过重复
+            if (name.isNotEmpty && name != "auto" && seen.add(name)) {
               result.add(AudioOutputDevice(id: name, name: desc));
             }
           }

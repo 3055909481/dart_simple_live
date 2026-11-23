@@ -242,7 +242,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                             title: "默认音频输出设备（全局）",
                             value: AudioDeviceService
                                 .instance.globalDeviceId.value,
-                            valueMap: controller.audioDeviceValueMap,
+                            valueMap: controller.audioDeviceValueMapGlobal,
                             onChanged: (value) {
                               AudioDeviceService.instance.setGlobal(value);
                             },
@@ -261,8 +261,9 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                                 title: site.name,
                                 value: AudioDeviceService
                                         .instance.siteDevices[site.id] ??
-                                    "auto",
-                                valueMap: controller.audioDeviceValueMap,
+                                    AudioOutputDevice.inherit.id,
+                                valueMap:
+                                    controller.audioDeviceValueMapInherited,
                                 onChanged: (value) {
                                   AudioDeviceService.instance
                                       .setSite(site.id, value);

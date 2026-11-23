@@ -3012,28 +3012,38 @@ class LiveRoomController extends PlayerController
     }
     final service = AudioDeviceService.instance;
     final roomKey = "${site.id}_$roomId";
+    // 直播间选项：先是"跟随上级"，再是设备列表（含"跟随系统默认"）
+    final options = <AudioOutputDevice>[
+      AudioOutputDevice.inherit,
+      ...devices,
+    ];
     final current = service.roomDevices[roomKey] ??
-        service.siteDevices[site.id] ??
-        service.globalDeviceId.value;
-    final currentDevice = devices.firstWhere(
+        AudioOutputDevice.inherit.id;
+    final currentDevice = options.firstWhere(
       (d) => d.id == current,
-      orElse: () => devices.first,
+      orElse: () => options.first,
     );
     final picked = await Utils.showOptionDialog<AudioOutputDevice>(
-      devices,
+      options,
       currentDevice,
       title: "音频输出设备（本直播间）",
       titleBuilder: (device) => Text(device.name),
-      subtitleBuilder: (device) =>
-          device.isAuto ? const Text("跟随平台/全局配置") : const SizedBox.shrink(),
+      subtitleBuilder: (device) {
+        if (device.isInherit) return const Text("使用平台或全局配置");
+        if (device.isAuto) return const Text("由 Windows 自动选择");
+        return const SizedBox.shrink();
+      },
     );
     if (picked == null) return;
     service.setRoom(roomKey, picked.id);
-    audioDeviceId = picked.id;
+    final resolvedId = picked.isInherit
+        ? service.resolveDeviceId(siteId: site.id, roomId: roomId)
+        : picked.id;
+    audioDeviceId = resolvedId;
     try {
       final platform = player.platform;
       if (platform is NativePlayer) {
-        await platform.setProperty('audio-device', picked.id);
+        await platform.setProperty('audio-device', resolvedId);
       }
     } catch (e) {
       Log.d("切换音频设备失败: $e");

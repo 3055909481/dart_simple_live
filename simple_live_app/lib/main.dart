@@ -37,6 +37,7 @@ import 'package:simple_live_app/services/douyin_account_service.dart';
 import 'package:simple_live_app/services/douyu_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
+import 'package:simple_live_app/services/hover_preview_service.dart';
 import 'package:simple_live_app/services/iptv_service.dart';
 import 'package:simple_live_app/services/kuaishou_account_service.dart';
 import 'package:simple_live_app/services/live_subtitle_service.dart';
@@ -535,6 +536,7 @@ Future initServices() async {
   Get.put(LiveSubtitleService());
   Get.put(ProfileBackupService());
   Get.put(AudioDeviceService());
+  Get.put(HoverPreviewService());
 
   if (DesktopStartupArgs.isSecondaryDesktopInstance) {
     Log.i("Skip SyncService for desktop secondary player instance");

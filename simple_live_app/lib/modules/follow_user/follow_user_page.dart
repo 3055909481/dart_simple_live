@@ -14,6 +14,7 @@ import 'package:simple_live_app/modules/follow_user/follow_user_controller.dart'
 import 'package:simple_live_app/services/current_room_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/filter_button.dart';
+import 'package:simple_live_app/widgets/hover_preview_wrapper.dart';
 import 'package:simple_live_app/widgets/follow_user_item.dart';
 import 'package:simple_live_app/widgets/live_room_grid_layout.dart';
 import 'package:simple_live_app/widgets/page_grid_view.dart';
@@ -256,33 +257,36 @@ class FollowUserPage extends GetView<FollowUserController> {
                               final isCurrent =
                                   "${item.siteId}_${item.roomId}" ==
                                       CurrentRoomService.instance.currentKey;
-                              return FollowUserItem(
+                              return HoverPreviewWrapper(
                                 item: item,
-                                style: layout.itemStyle,
-                                showLiveCover: AppSettingsController
-                                    .instance.followShowLiveCover.value,
-                                multiSelectMode:
-                                    controller.multiSelectMode.value,
-                                selectedForMultiRoom:
-                                    controller.isSelectedForMultiRoom(item),
-                                onSpecialTap: () {
-                                  controller.toggleSpecialFollow(item);
-                                },
-                                onRemove: () {
-                                  controller.removeItem(item);
-                                },
-                                onTap: () {
-                                  if (PlatformUtils.supportsInlineMultiRoom &&
-                                      controller.multiSelectMode.value) {
-                                    controller.toggleMultiRoomItem(item);
-                                    return;
-                                  }
-                                  controller.openFollowRoom(item);
-                                },
-                                onLongPress: () {
-                                  setFollowTagDialog(item);
-                                },
-                                playing: isCurrent,
+                                child: FollowUserItem(
+                                  item: item,
+                                  style: layout.itemStyle,
+                                  showLiveCover: AppSettingsController
+                                      .instance.followShowLiveCover.value,
+                                  multiSelectMode:
+                                      controller.multiSelectMode.value,
+                                  selectedForMultiRoom:
+                                      controller.isSelectedForMultiRoom(item),
+                                  onSpecialTap: () {
+                                    controller.toggleSpecialFollow(item);
+                                  },
+                                  onRemove: () {
+                                    controller.removeItem(item);
+                                  },
+                                  onTap: () {
+                                    if (PlatformUtils.supportsInlineMultiRoom &&
+                                        controller.multiSelectMode.value) {
+                                      controller.toggleMultiRoomItem(item);
+                                      return;
+                                    }
+                                    controller.openFollowRoom(item);
+                                  },
+                                  onLongPress: () {
+                                    setFollowTagDialog(item);
+                                  },
+                                  playing: isCurrent,
+                                ),
                               );
                             },
                           ),

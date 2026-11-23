@@ -36,7 +36,14 @@ class OtherSettingsController extends BaseController {
     audioDevicesLoaded.value = true;
   }
 
-  Map<String, String> get audioDeviceValueMap => {
+  /// 全局设备选项：含"跟随 Windows 默认设备"，不含"跟随上级"。
+  Map<String, String> get audioDeviceValueMapGlobal => {
+        for (final device in audioDevices) device.id: device.name,
+      };
+
+  /// 平台/直播间设备选项：额外含"跟随上级配置"。
+  Map<String, String> get audioDeviceValueMapInherited => {
+        AudioOutputDevice.inherit.id: AudioOutputDevice.inherit.name,
         for (final device in audioDevices) device.id: device.name,
       };
 

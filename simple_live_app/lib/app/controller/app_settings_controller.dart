@@ -404,6 +404,17 @@ class AppSettingsController extends GetxController {
     autoUpdateFollowDuration.value = LocalStorageService.instance
         .getValue(LocalStorageService.kUpdateFollowDuration, 10);
 
+    hoverPreviewEnable.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kHoverPreviewEnable,
+      false,
+    );
+    hoverPreviewDelaySeconds.value = _normalizeHoverPreviewDelay(
+      LocalStorageService.instance.getValue(
+        LocalStorageService.kHoverPreviewDelay,
+        2,
+      ),
+    );
+
     updateFollowThreadCount.value = _normalizeUpdateFollowThreadCount(
       LocalStorageService.instance.getValue(
         LocalStorageService.kUpdateFollowThreadCount,
@@ -3071,6 +3082,32 @@ class AppSettingsController extends GetxController {
     autoUpdateFollowDuration.value = e;
     LocalStorageService.instance
         .setValue(LocalStorageService.kUpdateFollowDuration, e);
+  }
+
+  /// 鼠标悬停预览直播画面（仅桌面端）
+  var hoverPreviewEnable = false.obs;
+  void setHoverPreviewEnable(bool e) {
+    hoverPreviewEnable.value = e;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kHoverPreviewEnable,
+      e,
+    );
+  }
+
+  var hoverPreviewDelaySeconds = 2.obs;
+  int get effectiveHoverPreviewDelaySeconds =>
+      _normalizeHoverPreviewDelay(hoverPreviewDelaySeconds.value);
+  int _normalizeHoverPreviewDelay(int value) {
+    return value.clamp(1, 10).toInt();
+  }
+
+  void setHoverPreviewDelaySeconds(int e) {
+    final value = _normalizeHoverPreviewDelay(e);
+    hoverPreviewDelaySeconds.value = value;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kHoverPreviewDelay,
+      value,
+    );
   }
 
   var updateFollowThreadCount = 0.obs;

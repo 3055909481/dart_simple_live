@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/platform_utils.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/settings/settings_action.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
@@ -90,6 +91,42 @@ class FollowSettingsPage extends GetView<AppSettingsController> {
                     },
                   ),
                 ),
+                if (PlatformUtils.supportsInlineMultiRoom) ...[
+                  AppStyle.divider,
+                  Obx(
+                    () => SettingsSwitch(
+                      value: controller.hoverPreviewEnable.value,
+                      title: "悬停预览直播画面",
+                      subtitle: "鼠标停留在关注项上片刻后，静音预览该直播间",
+                      onChanged: controller.setHoverPreviewEnable,
+                    ),
+                  ),
+                  Obx(
+                    () => Visibility(
+                      visible: controller.hoverPreviewEnable.value,
+                      child: Column(
+                        children: [
+                          AppStyle.divider,
+                          SettingsMenu<int>(
+                            title: "悬停等待时间",
+                            value:
+                                controller.effectiveHoverPreviewDelaySeconds,
+                            valueMap: const {
+                              1: "1 秒",
+                              2: "2 秒",
+                              3: "3 秒",
+                              5: "5 秒",
+                              10: "10 秒",
+                            },
+                            onChanged: (value) {
+                              controller.setHoverPreviewDelaySeconds(value);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 AppStyle.divider,
                 Obx(
                   () => SettingsMenu<int>(
