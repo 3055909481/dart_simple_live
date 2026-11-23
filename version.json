@@ -1,13 +1,13 @@
 {
-  "version": "1.0.8",
-  "tag": "v1.0.8",
-  "notes": "## v1.0.8 更新说明\n\n- 修复音频设备设置页可能变空白的问题（失效的设备配置导致构建异常）",
+  "version": "1.0.9",
+  "tag": "v1.0.9",
+  "notes": "## v1.0.9 更新说明\n\n- 修复斗鱼直播「播放签名刷新失败」无法观看的问题（JS 签名运行时内存/栈扩容 + 失败重试）",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.8+10008-windows.zip",
-      "msix": "simple_live_app-1.0.8+10008-windows.msix"
+      "zip": "simple_live_app-1.0.9+10009-windows.zip",
+      "msix": "simple_live_app-1.0.9+10009-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.8"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.9"
 }
