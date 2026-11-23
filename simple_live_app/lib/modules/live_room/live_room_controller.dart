@@ -3025,7 +3025,7 @@ class LiveRoomController extends PlayerController
       title: "音频输出设备（本直播间）",
       titleBuilder: (device) => Text(device.name),
       subtitleBuilder: (device) =>
-          device.isAuto ? const Text("跟随平台/全局配置") : null,
+          device.isAuto ? const Text("跟随平台/全局配置") : const SizedBox.shrink(),
     );
     if (picked == null) return;
     service.setRoom(roomKey, picked.id);

@@ -144,7 +144,11 @@ class AudioDeviceService extends GetxService {
           logLevel: MPVLogLevel.error,
         ),
       );
-      final raw = await probePlayer.platform
+      final platform = probePlayer.platform;
+      if (platform is! NativePlayer) {
+        return const [AudioOutputDevice.auto];
+      }
+      final raw = await platform
           .getProperty("audio-device-list")
           .timeout(const Duration(seconds: 5));
       final devices = <AudioOutputDevice>[AudioOutputDevice.auto];
@@ -160,13 +164,11 @@ class AudioDeviceService extends GetxService {
     }
   }
 
-  /// 解析 mpv audio-device-list（mpv node array 的脚本/JSON 表示）。
+  /// 解析 mpv audio-device-list（mpv node array 的 JSON 表示）。
   List<AudioOutputDevice> _parseDeviceList(String raw) {
     if (raw.trim().isEmpty) return const [];
     final result = <AudioOutputDevice>[];
     final seen = <String>{};
-
-    // 优先按 JSON 解析（mpv 返回的 node array 通常是 JSON 风格）。
     try {
       final decoded = json.decode(raw);
       if (decoded is List) {
@@ -179,22 +181,9 @@ class AudioDeviceService extends GetxService {
             }
           }
         }
-        return result;
       }
-    } catch (_) {}
-
-    // 兜底：正则提取 name/description 字段。
-    final nameReg = RegExp(r'["\']?name["\']?\s*[:=]\s*["\']([^"\']+)["\']');
-    final descReg =
-        RegExp(r'["\']?description["\']?\s*[:=]\s*["\']([^"\']+)["\']');
-    final names = nameReg.allMatches(raw).map((m) => m.group(1) ?? "");
-    final descs = descReg.allMatches(raw).map((m) => m.group(1) ?? "").toList();
-    var i = 0;
-    for (final name in names) {
-      if (name.isEmpty || !seen.add(name)) continue;
-      final desc = i < descs.length && descs[i].isNotEmpty ? descs[i] : name;
-      result.add(AudioOutputDevice(id: name, name: desc));
-      i += 1;
+    } catch (e) {
+      Log.d("解析音频设备列表失败: $e");
     }
     return result;
   }
