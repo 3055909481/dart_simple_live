@@ -1,13 +1,13 @@
 {
-  "version": "1.0.7",
-  "tag": "v1.0.7",
-  "notes": "## v1.0.7 更新说明\n\n- 新增鼠标悬停预览直播画面（桌面端）：停留约2秒后静音预览，时间可在关注设置里配置\n- 声音输出设备增加「跟随 Windows 默认设备」选项，并区分于「跟随上级配置」\n- 包含 v1.0.5/v1.0.6 全部改动：三级输出设备配置、关注筛选三维度同时选、友好更新提示",
+  "version": "1.0.8",
+  "tag": "v1.0.8",
+  "notes": "## v1.0.8 更新说明\n\n- 修复音频设备设置页可能变空白的问题（失效的设备配置导致构建异常）",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.7+10007-windows.zip",
-      "msix": "simple_live_app-1.0.7+10007-windows.msix"
+      "zip": "simple_live_app-1.0.8+10008-windows.zip",
+      "msix": "simple_live_app-1.0.8+10008-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.7"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.8"
 }
