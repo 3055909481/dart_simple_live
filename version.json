@@ -1,13 +1,13 @@
 {
-  "version": "1.0.5",
-  "tag": "v1.0.5",
-  "notes": "## v1.0.5 更新说明\n\n- 新增声音输出设备选择（桌面端）：支持全局配置 / 平台配置 / 直播间配置三级，就近优先\n- 修复关注页状态、标签、平台三个筛选无法同时选择的问题\n- 直播间切换输出设备会立即生效并记住，下次进入沿用",
+  "version": "1.0.6",
+  "tag": "v1.0.6",
+  "notes": "## v1.0.6 更新说明\n\n- 更新失败时显示友好中文提示（如安装包未就绪、网络超时），不再显示英文异常堆栈\n- 包含 v1.0.5 全部改动：声音输出设备三级配置、关注筛选三维度可同时选",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.5+10005-windows.zip",
-      "msix": "simple_live_app-1.0.5+10005-windows.msix"
+      "zip": "simple_live_app-1.0.6+10006-windows.zip",
+      "msix": "simple_live_app-1.0.6+10006-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.5"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.6"
 }
