@@ -1,13 +1,13 @@
 {
-  "version": "1.0.3",
-  "tag": "v1.0.3",
-  "notes": "## v1.0.3 更新说明\n\n⚠️ 本次需要手动下载安装：请到 Release 页面下载 windows.zip，解压后运行 exe（上一版自动更新因下载链接问题无法完成）。\n\n- 修复 Windows 自动更新下载 404 导致进度条一闪而过的问题\n- 更新失败时会在窗口内直接显示错误原因\n- 包含 v1.0.2 全部改动：每平台独立并发、Stripchat 官网图标、关注即时状态、关注页一行式筛选栏与底部刷新状态栏",
+  "version": "1.0.4",
+  "tag": "v1.0.4",
+  "notes": "## v1.0.4 更新说明\n\n- 关注设置新增「抖音并发线程数」独立配置（自动 / 1-4）\n- 关注页筛选栏改为下拉按钮：标签/状态/平台，选中项高亮显示\n- 移除冗余的「仅显示开播」开关（用状态组的「直播中」即可）\n- 刷新进度条改为细长条，进度百分比嵌在条内，更省空间\n- 修复 Windows 自动更新下载 404 问题（v1.0.3 已修复，仍需手动升级一次）",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.3+10003-windows.zip",
-      "msix": "simple_live_app-1.0.3+10003-windows.msix"
+      "zip": "simple_live_app-1.0.4+10004-windows.zip",
+      "msix": "simple_live_app-1.0.4+10004-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.3"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.4"
 }
