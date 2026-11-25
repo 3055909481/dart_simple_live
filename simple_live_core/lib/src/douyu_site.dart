@@ -325,7 +325,12 @@ class DouyuSite implements LiveSite {
     }
     final value = fallback?.toString() ?? "";
     if (value.isEmpty) {
-      throw CoreError("斗鱼播放签名刷新失败");
+      final diag = DouyuSign.lastDiag;
+      throw CoreError(
+        diag.isEmpty
+            ? "斗鱼播放签名刷新失败"
+            : "斗鱼签名诊断: $diag",
+      );
     }
     return value;
   }
