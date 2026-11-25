@@ -318,11 +318,6 @@ class DouyuSite implements LiveSite {
         if (signed.isNotEmpty) {
           return signed;
         }
-        // 签名偶发失败（JS 运行时资源紧张等）时再试一次，避免直接判失败。
-        final signedRetry = DouyuSign.getSign(script, roomId, _deviceDid);
-        if (signedRetry.isNotEmpty) {
-          return signedRetry;
-        }
       }
     } catch (_) {
       // Keep the original arguments as a compatibility fallback for transient
