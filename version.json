@@ -1,13 +1,13 @@
 {
-  "version": "1.0.10",
-  "tag": "v1.0.10",
-  "notes": "## v1.0.10 更新说明\n\n- 修复更新下载偶发 404：自动查询真实资产名重试（发版时序窗口/atom兜底文件名问题）\n- 包含 v1.0.9：斗鱼播放签名刷新失败修复",
+  "version": "1.0.11",
+  "tag": "v1.0.11",
+  "notes": "## v1.0.11 更新说明\n\n- 修复斗鱼直播无法观看：对照上游核定根因为斗鱼签名脚本改用嵌套 eval，QuickJS 执行失败；现绕过嵌套 eval 执行签名，兼容新旧脚本。",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.10+10010-windows.zip",
-      "msix": "simple_live_app-1.0.10+10010-windows.msix"
+      "zip": "simple_live_app-1.0.11+10011-windows.zip",
+      "msix": "simple_live_app-1.0.11+10011-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.10"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.11"
 }
