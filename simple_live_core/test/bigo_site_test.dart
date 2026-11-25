@@ -76,6 +76,7 @@ void main() {
         needLogin: false,
         locked: false,
       );
+      expect(play.needLogin, isFalse);
       expect(play.alive, isTrue);
       expect(play.hls, contains('.m3u8'));
     });

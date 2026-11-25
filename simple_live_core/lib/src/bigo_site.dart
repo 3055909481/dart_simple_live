@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:simple_live_core/src/common/bigo_crypto.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/danmaku/bigo_danmaku.dart';
+import 'package:simple_live_core/src/interface/live_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_site.dart';
 import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import 'package:simple_live_core/src/model/live_category.dart';
@@ -440,8 +441,8 @@ class BigoPlayData {
     required this.roomId,
     required this.hls,
     required this.alive,
-    required this.needLogin = false,
-    required this.locked = false,
+    required this.needLogin,
+    required this.locked,
   });
 }
 
