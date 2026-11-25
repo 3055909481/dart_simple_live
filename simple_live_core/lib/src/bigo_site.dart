@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:simple_live_core/src/common/bigo_crypto.dart';
+import 'package:simple_live_core/src/common/bigo_proxy.dart';
 import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/danmaku/bigo_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_danmaku.dart';
@@ -358,7 +359,9 @@ class BigoSite extends LiveSite {
     if (play.hls.isEmpty) {
       throw StateError('Bigo 未返回播放地址');
     }
-    return LivePlayUrl(urls: [play.hls], headers: requestHeaders);
+    // Bigo 的分片被 xorshift 打乱，必须经本地代理还原，否则黑屏转圈。
+    final proxied = await BigoProxy.instance.proxyUrlFor(play.hls);
+    return LivePlayUrl(urls: [proxied], headers: requestHeaders);
   }
 
   Future<BigoPlayData> _refreshPlayData(String roomId) async {
