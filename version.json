@@ -1,13 +1,13 @@
 {
-  "version": "1.0.14",
-  "tag": "v1.0.14",
-  "notes": "## v1.0.14 更新说明\n\n- 修复斗鱼直播无法观看：Windows 构建缺少 dart_quickjs.dll（构建时序问题），现改为构建后动态查找并打包该原生库。",
+  "version": "1.0.15",
+  "tag": "v1.0.15",
+  "notes": "## v1.0.15 更新说明\n\n- 新增 Bigo Live 平台支持：分类/推荐、搜索、直播间播放、弹幕（移植自 PureLive 成熟实现）",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.14+10014-windows.zip",
-      "msix": "simple_live_app-1.0.14+10014-windows.msix"
+      "zip": "simple_live_app-1.0.15+10015-windows.zip",
+      "msix": "simple_live_app-1.0.15+10015-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.14"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.15"
 }
