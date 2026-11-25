@@ -1,13 +1,13 @@
 {
-  "version": "1.0.11",
-  "tag": "v1.0.11",
-  "notes": "## v1.0.11 更新说明\n\n- 修复斗鱼直播无法观看：对照上游核定根因为斗鱼签名脚本改用嵌套 eval，QuickJS 执行失败；现绕过嵌套 eval 执行签名，兼容新旧脚本。",
+  "version": "1.0.12",
+  "tag": "v1.0.12",
+  "notes": "## v1.0.12 更新说明\n\n- 斗鱼相关代码完全恢复为上游 June6699 v1.13.3 的实现（逐字节一致），上游版本实测可正常观看斗鱼。",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.11+10011-windows.zip",
-      "msix": "simple_live_app-1.0.11+10011-windows.msix"
+      "zip": "simple_live_app-1.0.12+10012-windows.zip",
+      "msix": "simple_live_app-1.0.12+10012-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.11"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.12"
 }
