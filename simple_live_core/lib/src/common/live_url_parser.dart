@@ -30,6 +30,7 @@ class LiveUrlParser {
   static const String siteDouyin = "douyin";
   static const String siteKuaishou = "kuaishou";
   static const String siteStripchat = "stripchat";
+  static const String siteBigoTv = "bigotv";
 
   static final RegExp _roomIdPattern = RegExp(r'^[A-Za-z0-9._-]+$');
   static final RegExp _numericRoomIdPattern = RegExp(r'^\d+$');
@@ -53,6 +54,10 @@ class LiveUrlParser {
     }
     if (host == "v.kuaishou.com") {
       return LiveParsedUrl(siteId: siteKuaishou, uri: uri, isShortLink: true);
+    }
+    // Bigo 短链需跟随重定向后才能拿到房间号。
+    if (host == "slink.bigovideo.tv") {
+      return LiveParsedUrl(siteId: siteBigoTv, uri: uri, isShortLink: true);
     }
 
     if (host == "live.kuaishou.com" ||
@@ -139,6 +144,29 @@ class LiveUrlParser {
         return null;
       }
       return _room(siteStripchat, segments.first, uri);
+    }
+
+    // Bigo: https://www.bigo.tv/<siteId> 或 https://www.bigo.tv/?h=<siteId>
+    if (host == "bigo.tv" || host.endsWith(".bigo.tv")) {
+      final h = uri.queryParameters["h"];
+      if (h != null && h.isNotEmpty) {
+        return _room(siteBigoTv, h, uri);
+      }
+      const reserved = {
+        "about",
+        "download",
+        "index",
+        "live",
+        "login",
+        "search",
+        "signup",
+        "cn",
+      };
+      for (final seg in segments) {
+        if (reserved.contains(seg.toLowerCase())) continue;
+        return _room(siteBigoTv, seg, uri);
+      }
+      return null;
     }
 
     return null;

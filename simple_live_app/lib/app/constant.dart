@@ -111,6 +111,7 @@ class Constant {
   static const String kDouyin = "douyin";
   static const String kKuaishou = "kuaishou";
   static const String kStripchat = "stripchat";
+  static const String kBigoTv = "bigotv";
 }
 
 class HomePageItem {

@@ -8,6 +8,7 @@ export 'src/douyu_site.dart';
 export 'src/douyin_site.dart';
 export 'src/kuaishou_site.dart';
 export 'src/stripchat_site.dart';
+export 'src/bigo_site.dart';
 export 'src/common/core_error.dart';
 export 'src/common/auto_exit_session.dart';
 export 'src/common/core_log.dart';
@@ -33,6 +34,7 @@ export 'src/danmaku/douyu_danmaku.dart';
 export 'src/danmaku/huya_danmaku.dart';
 export 'src/danmaku/douyin_danmaku.dart';
 export 'src/danmaku/kuaishou_danmaku.dart';
+export 'src/danmaku/bigo_danmaku.dart';
 
 export 'src/model/live_category_result.dart';
 export 'src/model/live_contribution_rank.dart';

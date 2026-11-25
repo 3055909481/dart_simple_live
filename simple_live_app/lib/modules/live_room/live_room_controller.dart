@@ -4213,6 +4213,10 @@ class LiveRoomController extends PlayerController
       // Stripchat 无对应客户端跳转 scheme，直接用浏览器打开房间页。
       naviteUrl = detail.value?.url ?? "https://stripchat.com/${detail.value?.roomId}";
       webUrl = naviteUrl;
+    } else if (site.id == Constant.kBigoTv) {
+      // Bigo 用浏览器打开房间页。
+      naviteUrl = detail.value?.url ?? "https://www.bigo.tv/${detail.value?.roomId}";
+      webUrl = naviteUrl;
     }
     try {
       await launchUrlString(naviteUrl, mode: LaunchMode.externalApplication);

@@ -46,6 +46,13 @@ class Sites {
       liveSite: StripchatSite(),
       index: 5,
     ),
+    Constant.kBigoTv: Site(
+      id: Constant.kBigoTv,
+      logo: "assets/images/bigotv.png",
+      name: "Bigo Live",
+      liveSite: BigoSite(),
+      index: 6,
+    ),
   };
 
   static List<Site> get supportSites {
