@@ -1,13 +1,13 @@
 {
-  "version": "1.0.16",
-  "tag": "v1.0.16",
-  "notes": "## v1.0.16 更新说明\n\n- 新增 Bigo Live 平台支持（分类/推荐、搜索、播放、弹幕）\n- 修复编译错误",
+  "version": "1.0.17",
+  "tag": "v1.0.17",
+  "notes": "## v1.0.17 更新说明\n\n- 修复 Bigo Live 播放失败：改用无令牌方案（yt-dlp 成熟做法）获取直播地址，令牌机制改为备用",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.16+10016-windows.zip",
-      "msix": "simple_live_app-1.0.16+10016-windows.msix"
+      "zip": "simple_live_app-1.0.17+10017-windows.zip",
+      "msix": "simple_live_app-1.0.17+10017-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.16"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.17"
 }
