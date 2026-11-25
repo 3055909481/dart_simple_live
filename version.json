@@ -1,13 +1,13 @@
 {
-  "version": "1.0.17",
-  "tag": "v1.0.17",
-  "notes": "## v1.0.17 更新说明\n\n- 修复 Bigo Live 播放失败：改用无令牌方案（yt-dlp 成熟做法）获取直播地址，令牌机制改为备用",
+  "version": "1.0.18",
+  "tag": "v1.0.18",
+  "notes": "## v1.0.18 更新说明\n\n- 账号管理新增 Bigo Live 与 Stripchat 的 Cookie 登录（手动粘贴 Cookie）\n- Bigo 无令牌方案：配置登录 Cookie 可解决部分网络出口无法播放的问题",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.17+10017-windows.zip",
-      "msix": "simple_live_app-1.0.17+10017-windows.msix"
+      "zip": "simple_live_app-1.0.18+10018-windows.zip",
+      "msix": "simple_live_app-1.0.18+10018-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.17"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.18"
 }
