@@ -43,6 +43,16 @@ class BigoSite extends LiveSite {
     'x-requested-with': 'XMLHttpRequest',
   };
 
+  /// 登录 Cookie（由 App 层账号服务注入）。Bigo 部分出口 IP 需要登录态。
+  String cookie = "";
+
+  /// 带 Cookie 的请求头。
+  Map<String, String> get requestHeaders {
+    final headers = Map<String, String>.from(_headers);
+    if (cookie.trim().isNotEmpty) headers['cookie'] = cookie.trim();
+    return headers;
+  }
+
   /// 列表缓存（Bigo 首页列表是一份约 20 条的快照，本地分页）。
   List<LiveRoomItem>? _cachedRooms;
   DateTime? _cachedAt;
@@ -87,7 +97,7 @@ class BigoSite extends LiveSite {
         'lang': 'en',
         'countryCode': 'US',
       },
-      header: _headers,
+      header: requestHeaders,
     );
     final rooms = <LiveRoomItem>[];
     if (result is Map) {
@@ -348,7 +358,7 @@ class BigoSite extends LiveSite {
     if (play.hls.isEmpty) {
       throw StateError('Bigo 未返回播放地址');
     }
-    return LivePlayUrl(urls: [play.hls], headers: _headers);
+    return LivePlayUrl(urls: [play.hls], headers: requestHeaders);
   }
 
   Future<BigoPlayData> _refreshPlayData(String roomId) async {
@@ -370,7 +380,7 @@ class BigoSite extends LiveSite {
     final timeText = await HttpClient.instance.getText(
       'https://$_tokenHost/v1/webjs/t',
       queryParameters: {'callback': timeCallback},
-      header: _headers,
+      header: requestHeaders,
     );
     final timestamp = _jsonpValue(timeText, timeCallback)?['time']?.toString();
     if (timestamp == null || timestamp.isEmpty) {
@@ -384,7 +394,7 @@ class BigoSite extends LiveSite {
         'callback': statusCallback,
         'data': BigoCrypto.buildTokenData(timestamp),
       },
-      header: _headers,
+      header: requestHeaders,
     );
     final token = _jsonpValue(statusText, statusCallback)?['token']?.toString();
     if (token == null || token.isEmpty) {
@@ -394,11 +404,13 @@ class BigoSite extends LiveSite {
   }
 
   /// 无令牌查询直播间信息（yt-dlp 方案）。
-  /// 关键：只带 `Accept: application/json` 一个 header，参数放表单 body。
+  /// 只带 `Accept: application/json`（+ 可选登录 Cookie），参数放表单 body。
   Future<Map<String, dynamic>?> _askStudioDirect(String roomId) async {
+    final headers = <String, String>{'Accept': 'application/json'};
+    if (cookie.trim().isNotEmpty) headers['Cookie'] = cookie.trim();
     final result = await HttpClient.instance.postJson(
       'https://$_apiHost$_studioPath',
-      header: {'Accept': 'application/json'},
+      header: headers,
       data: 'siteId=${Uri.encodeQueryComponent(roomId)}',
       formUrlEncoded: true,
     );
@@ -421,7 +433,7 @@ class BigoSite extends LiveSite {
         'verify': '',
         'token': token,
       },
-      header: _headers,
+      header: requestHeaders,
       formUrlEncoded: true,
     );
     if (result is! Map) return null;

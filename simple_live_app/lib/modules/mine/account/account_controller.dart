@@ -11,6 +11,8 @@ import 'package:simple_live_app/modules/mine/account/douyu/qr_login_controller.d
 import 'package:simple_live_app/modules/mine/account/douyu/qr_login_page.dart';
 import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
+import 'package:simple_live_app/services/bigo_account_service.dart';
+import 'package:simple_live_app/services/stripchat_account_service.dart';
 import 'package:simple_live_app/services/douyin_account_service.dart';
 import 'package:simple_live_app/services/douyu_account_service.dart';
 import 'package:simple_live_app/services/kuaishou_account_service.dart';
@@ -890,6 +892,116 @@ class AccountController extends GetxController {
     return !hasCookie || cookie.isEmpty
         ? "未配置，匿名高画质可能约 10 分钟断流"
         : "已配置登录 Cookie（${cookie.length} 字符）";
+  }
+
+  String getBigoCookieSummaryText() {
+    final account = BigoAccountService.instance;
+    final hasCookie = account.hasCookie.value;
+    final cookie = account.cookie;
+    return !hasCookie || cookie.isEmpty
+        ? "未配置（部分出口需要登录才能播放）"
+        : "已配置登录 Cookie（${cookie.length} 字符）";
+  }
+
+  String getStripchatCookieSummaryText() {
+    final account = StripchatAccountService.instance;
+    final hasCookie = account.hasCookie.value;
+    final cookie = account.cookie;
+    return !hasCookie || cookie.isEmpty
+        ? "未配置，匿名可看公开直播"
+        : "已配置登录 Cookie（${cookie.length} 字符）";
+  }
+
+  void bigoTap() {
+    final account = BigoAccountService.instance;
+    _showSimpleCookieDialog(
+      title: "配置 Bigo Cookie",
+      hint: "粘贴 www.bigo.tv 登录后的完整 Cookie",
+      notice: "Bigo 对部分网络出口要求登录才返回播放地址。请在浏览器登录 www.bigo.tv 后，"
+          "从开发者工具/抓包工具复制完整 Cookie 粘贴到这里。Cookie 只保存在本机。",
+      currentCookie: account.cookie,
+      hasCookie: account.hasCookie.value,
+      onSave: account.setCookie,
+      onClear: account.clearCookie,
+    );
+  }
+
+  void stripchatTap() {
+    final account = StripchatAccountService.instance;
+    _showSimpleCookieDialog(
+      title: "配置 Stripchat Cookie",
+      hint: "粘贴 stripchat.com 登录后的完整 Cookie",
+      notice: "如需访问 Stripchat 登录专属内容，请在浏览器登录 stripchat.com 后复制完整 Cookie 粘贴。"
+          "公开直播无需登录。Cookie 只保存在本机。",
+      currentCookie: account.cookie,
+      hasCookie: account.hasCookie.value,
+      onSave: account.setCookie,
+      onClear: account.clearCookie,
+    );
+  }
+
+  /// 通用登录 Cookie 输入弹窗（手动粘贴模式）。
+  void _showSimpleCookieDialog({
+    required String title,
+    required String hint,
+    required String notice,
+    required String currentCookie,
+    required bool hasCookie,
+    required void Function(String) onSave,
+    required void Function() onClear,
+  }) {
+    final textController = TextEditingController(
+      text: currentCookie,
+    );
+    Get.dialog(
+      AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(notice, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: textController,
+                maxLines: 6,
+                decoration: InputDecoration(
+                  labelText: "Cookie",
+                  hintText: hint,
+                  alignLabelWithHint: true,
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          if (hasCookie)
+            TextButton(
+              onPressed: () {
+                onClear();
+                Get.back();
+                SmartDialog.showToast("已清除 Cookie");
+              },
+              child: const Text("清除"),
+            ),
+          TextButton(onPressed: () => Get.back(), child: const Text("取消")),
+          TextButton(
+            onPressed: () {
+              final value = _normalizeCookieInput(textController.text);
+              onSave(value);
+              Get.back();
+              SmartDialog.showToast(
+                value.isEmpty ? "已清除 Cookie" : "Cookie 已保存",
+              );
+            },
+            child: const Text("保存"),
+          ),
+        ],
+      ),
+    ).whenComplete(textController.dispose);
   }
 
   String _currentKuaishouCredentialsText() {

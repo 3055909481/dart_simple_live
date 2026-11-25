@@ -143,6 +143,8 @@ class LocalStorageService extends GetxService {
   static const String kDanmuDedupeWindow = "DanmuDedupeWindow";
   static const String kDanmuDedupeStep = "DanmuDedupeStep";
   static const String kBilibiliCookie = "BilibiliCookie";
+  static const String kBigoCookie = "BigoCookie";
+  static const String kStripchatCookie = "StripchatCookie";
   static const String kDouyinCookie = "DouyinCookie";
   static const String kDouyuCookie = "DouyuCookie";
   static const String kDouyuDeviceId = "DouyuDeviceId";

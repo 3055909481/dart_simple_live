@@ -65,6 +65,20 @@ class AccountPage extends GetView<AccountController> {
                   : const Icon(Icons.chevron_right),
               onTap: controller.kuaishouTap,
             )),
+            Obx(() => ListTile(
+              leading: Image.asset('assets/images/bigotv.png', width: 36, height: 36),
+              title: const Text("Bigo Live"),
+              subtitle: Text(controller.getBigoCookieSummaryText()),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: controller.bigoTap,
+            )),
+            Obx(() => ListTile(
+              leading: Image.asset('assets/images/stripchat.png', width: 36, height: 36),
+              title: const Text("Stripchat"),
+              subtitle: Text(controller.getStripchatCookieSummaryText()),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: controller.stripchatTap,
+            )),
             const Divider(height: 32),
             const Padding(
               padding: AppStyle.edgeInsetsH12,

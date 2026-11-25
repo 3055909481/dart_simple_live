@@ -31,6 +31,16 @@ class StripchatSite implements LiveSite {
     "Origin": _baseUrl,
   };
 
+  /// 登录 Cookie（由 App 层账号服务注入），用于访问需登录的内容。
+  String cookie = "";
+
+  /// 带 Cookie 的请求头。
+  Map<String, String> get requestHeaders {
+    final headers = Map<String, String>.from(_headers);
+    if (cookie.trim().isNotEmpty) headers["Cookie"] = cookie.trim();
+    return headers;
+  }
+
   /// primaryTag 是具有实际意义的分类维度。
   /// 站点 tag 接口未开放，这里按公开前端已知的取值内置。
   static final List<LiveSubCategory> _primaryTags = [
@@ -57,7 +67,7 @@ class StripchatSite implements LiveSite {
     Map<String, dynamic>? queryParameters,
     Map<String, String>? extraHeaders,
   }) {
-    final headers = Map<String, String>.from(_headers);
+    final headers = requestHeaders;
     if (extraHeaders != null) {
       headers.addAll(extraHeaders);
     }
@@ -71,7 +81,7 @@ class StripchatSite implements LiveSite {
   Future<String> _getText(String path) {
     return HttpClient.instance.getText(
       "$_baseUrl$path",
-      header: _headers,
+      header: requestHeaders,
     );
   }
 
@@ -130,7 +140,7 @@ class StripchatSite implements LiveSite {
     }
     final html = await HttpClient.instance.getText(
       "$_baseUrl/$tagUrl",
-      header: _headers,
+      header: requestHeaders,
     );
     final state = _extractPreloadedState(html);
     if (state == null || state["tagPage"] is! Map) {
@@ -547,7 +557,7 @@ class StripchatSite implements LiveSite {
       data.streamUrl,
       lowLatency: lowLatencyEnabled,
     );
-    return LivePlayUrl(urls: [proxied], headers: _headers);
+    return LivePlayUrl(urls: [proxied], headers: requestHeaders);
   }
 
   @override

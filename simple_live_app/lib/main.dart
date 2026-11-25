@@ -33,6 +33,8 @@ import 'package:simple_live_app/services/audio_device_service.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/current_room_service.dart';
 import 'package:simple_live_app/services/custom_category_service.dart';
+import 'package:simple_live_app/services/bigo_account_service.dart';
+import 'package:simple_live_app/services/stripchat_account_service.dart';
 import 'package:simple_live_app/services/douyin_account_service.dart';
 import 'package:simple_live_app/services/douyu_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
@@ -528,6 +530,8 @@ Future initServices() async {
 
   Get.put(DouyinAccountService());
   Get.put(DouyuAccountService());
+  Get.put(BigoAccountService());
+  Get.put(StripchatAccountService());
 
   Get.put(KuaishouAccountService());
 
