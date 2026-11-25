@@ -222,8 +222,7 @@ class BigoSite extends LiveSite {
   @override
   Future<bool> getLiveStatus({required String roomId}) async {
     try {
-      final token = await _fetchToken();
-      final data = await _askStudio(roomId, token);
+      final (data, _) = await _studioData(roomId);
       if (data == null) return false;
       return data['alive']?.toString() == '1' &&
           data['needLogin'] != true &&
@@ -234,10 +233,36 @@ class BigoSite extends LiveSite {
     }
   }
 
+  /// 查询直播间信息：优先无令牌方式（yt-dlp 方案，最稳），
+  /// 失败/要求登录时才尝试网页令牌方式。返回 (data, token)。
+  Future<(Map<String, dynamic>?, String?)> _studioData(String roomId) async {
+    Map<String, dynamic>? direct;
+    // 主路径：无令牌（yt-dlp 的成熟做法）。
+    try {
+      direct = await _askStudioDirect(roomId);
+      if (direct != null && direct['hls_src']?.toString().isNotEmpty == true) {
+        return (direct, null);
+      }
+    } catch (_) {}
+    // 备用：网页令牌（无令牌没拿到 hls_src 时才试）。
+    final directHls = direct?['hls_src']?.toString() ?? '';
+    if (directHls.isEmpty) {
+      try {
+        final token = await _fetchToken();
+        final data = await _askStudio(roomId, token);
+        if (data != null) {
+          final hls = data['hls_src']?.toString() ?? '';
+          if (hls.isNotEmpty || direct == null) return (data, token);
+        }
+      } catch (_) {}
+    }
+    // 兜底：无令牌的元数据（即使 hls 为空，至少能展示房间信息）。
+    return (direct, null);
+  }
+
   @override
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
-    final token = await _fetchToken();
-    final data = await _askStudio(roomId, token);
+    final (data, token) = await _studioData(roomId);
     if (data == null) {
       throw StateError('Bigo 未找到直播间：$roomId');
     }
@@ -264,10 +289,12 @@ class BigoSite extends LiveSite {
       status: alive,
       url: '$_webOrigin/$siteId',
       notice: needLogin
-          ? '该直播间要求登录，暂时无法播放'
+          ? '该直播间要求登录，暂时无法播放（Bigo 可能限制了当前网络出口）'
           : locked
               ? '该直播间设置了密码或付费观看，暂时无法播放'
-              : null,
+              : (alive && hls.isEmpty)
+                  ? 'Bigo 未返回播放地址，可能是网络出口被限制，请尝试更换网络'
+                  : null,
       data: BigoPlayData(
         roomId: siteId,
         hls: hls,
@@ -325,8 +352,7 @@ class BigoSite extends LiveSite {
   }
 
   Future<BigoPlayData> _refreshPlayData(String roomId) async {
-    final token = await _fetchToken();
-    final data = await _askStudio(roomId, token);
+    final (data, _) = await _studioData(roomId);
     if (data == null) throw StateError('Bigo 未找到直播间：$roomId');
     return BigoPlayData(
       roomId: data['clientBigoId']?.toString() ?? roomId,
@@ -365,6 +391,22 @@ class BigoSite extends LiveSite {
       throw StateError('Bigo 获取网页令牌失败');
     }
     return token;
+  }
+
+  /// 无令牌查询直播间信息（yt-dlp 方案）。
+  /// 关键：只带 `Accept: application/json` 一个 header，参数放表单 body。
+  Future<Map<String, dynamic>?> _askStudioDirect(String roomId) async {
+    final result = await HttpClient.instance.postJson(
+      'https://$_apiHost$_studioPath',
+      header: {'Accept': 'application/json'},
+      data: 'siteId=${Uri.encodeQueryComponent(roomId)}',
+      formUrlEncoded: true,
+    );
+    if (result is! Map) return null;
+    final code = result['code'];
+    if (code != null && code.toString() != '0') return null;
+    final data = result['data'];
+    return data is Map ? Map<String, dynamic>.from(data) : null;
   }
 
   /// 带令牌查询直播间信息。
