@@ -1,13 +1,13 @@
 {
-  "version": "1.0.22",
-  "tag": "v1.0.22",
-  "notes": "## v1.0.22 更新说明\n\n- 修复 Stripchat 部分直播间状态误判为未开播（能观看但显示未开播）",
+  "version": "1.0.23",
+  "tag": "v1.0.23",
+  "notes": "## v1.0.23 更新说明\n\n- 修复 Stripchat 关注列表直播间状态始终显示未开播（冷门房间不在公开列表导致误判）",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.22+10022-windows.zip",
-      "msix": "simple_live_app-1.0.22+10022-windows.msix"
+      "zip": "simple_live_app-1.0.23+10023-windows.zip",
+      "msix": "simple_live_app-1.0.23+10023-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.22"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.23"
 }
