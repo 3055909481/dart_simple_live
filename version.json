@@ -1,13 +1,13 @@
 {
-  "version": "1.0.20",
-  "tag": "v1.0.20",
-  "notes": "## v1.0.20 更新说明\n\n- 新增 Stripchat 弹幕支持（此前返回空实现）\n- 新增按直播间记忆音量：可在播放设置开启，每个直播间单独保存音量",
+  "version": "1.0.21",
+  "tag": "v1.0.21",
+  "notes": "## v1.0.21 更新说明\n\n- 修复 Stripchat 弹幕反复重连：修正 Centrifugo 心跳协议（被动 pong，不主动发 ping）",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.20+10020-windows.zip",
-      "msix": "simple_live_app-1.0.20+10020-windows.msix"
+      "zip": "simple_live_app-1.0.21+10021-windows.zip",
+      "msix": "simple_live_app-1.0.21+10021-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.20"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.21"
 }
