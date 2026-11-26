@@ -341,7 +341,8 @@ class StripchatSite implements LiveSite {
     final username = model["username"]?.toString() ?? "";
     final modelId = model["id"]?.toString() ?? "";
     final streamName = _resolveStreamName(model);
-    final isLive = model["isLive"] == true || model["isOnline"] == true;
+    final isLive = _parseIsLive(model["isLive"]) ||
+        _parseIsLive(model["isOnline"]);
     final presets = _parsePresets(model["presets"]);
     final topic = _firstNonEmptyString([
       model["topic"],
@@ -387,7 +388,11 @@ class StripchatSite implements LiveSite {
     final streamName = _resolveStreamNameFromState(viewCam, viewCamBase);
     final topic = viewCam is Map ? viewCam["topic"]?.toString() : null;
     final avatar = modelMap["avatarUrl"]?.toString() ?? "";
-    final isLive = modelMap["isLive"] == true;
+    // 部分直播间（如冷门/新结构页面）model.isLive 缺失或为 false，
+    // 但有 streamName 且能正常播放（用户实测场景）。
+    // 多路径判断 + streamName 兜底：只要有可用流就认为在播。
+    final isLive = _resolveIsLiveFromState(state, viewCam, modelMap) ||
+        streamName.isNotEmpty;
 
     List<String> presets = const [];
     if (viewCamBase is Map) {
@@ -418,6 +423,49 @@ class StripchatSite implements LiveSite {
         wsToken,
       ),
     );
+  }
+
+  /// 解析 isLive，兼容 bool / int / string 多种类型。
+  static bool _parseIsLive(dynamic value) {
+    if (value == null) return false;
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    final text = value.toString().trim().toLowerCase();
+    return text == 'true' || text == '1';
+  }
+
+  /// 多路径判断直播状态（兼容新旧 SSR 结构 + broadcast）。
+  static bool _resolveIsLiveFromState(
+    Map<String, dynamic> state,
+    dynamic viewCam,
+    Map<dynamic, dynamic> modelMap,
+  ) {
+    Map<String, dynamic>? asMap(Object? value) =>
+        value is Map ? Map<String, dynamic>.from(value) : null;
+
+    final vc = asMap(viewCam) ?? <String, dynamic>{};
+    final model = asMap(vc["model"]) ?? <String, dynamic>{};
+    final cam = asMap(vc["cam"]) ?? <String, dynamic>{};
+    final camUser = asMap(cam["user"]) ?? <String, dynamic>{};
+    final camUserInner = asMap(camUser["user"]) ?? <String, dynamic>{};
+    final broadcast = asMap(vc["broadcast"]) ?? <String, dynamic>{};
+    final broadcastItem = asMap(broadcast["item"]) ?? <String, dynamic>{};
+    final viewCamBase = asMap(state["viewCamBase"]) ?? <String, dynamic>{};
+    final baseModel = asMap(viewCamBase["model"]) ?? <String, dynamic>{};
+
+    // 任一路径为 true 即视为在播。
+    for (final value in [
+      modelMap["isLive"],
+      model["isLive"],
+      camUserInner["isLive"],
+      camUser["isLive"],
+      vc["isLive"],
+      broadcastItem["isLive"],
+      baseModel["isLive"],
+    ]) {
+      if (_parseIsLive(value)) return true;
+    }
+    return false;
   }
 
   /// 从 SSR 状态里提取主播数字 ID（兼容新旧页面结构）。
@@ -659,7 +707,7 @@ class StripchatSite implements LiveSite {
     if (model == null) {
       return false;
     }
-    return model["isLive"] == true || model["isOnline"] == true;
+    return _parseIsLive(model["isLive"]) || _parseIsLive(model["isOnline"]);
   }
 
   @override
