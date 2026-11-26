@@ -189,11 +189,9 @@ class StripchatDanmaku implements LiveDanmaku {
     if (body.isEmpty) return null;
     final username = userData['username']?.toString().trim() ?? '';
 
-    final messageType = switch (type) {
-      'text' => LiveMessageType.chat,
-      'tip' || 'lovense' => LiveMessageType.gift,
-      _ => LiveMessageType.chat,
-    };
+    final messageType = (type == 'tip' || type == 'lovense')
+        ? LiveMessageType.gift
+        : LiveMessageType.chat;
     return LiveMessage(
       type: messageType,
       userName: username,
