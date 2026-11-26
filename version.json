@@ -1,13 +1,13 @@
 {
-  "version": "1.0.21",
-  "tag": "v1.0.21",
-  "notes": "## v1.0.21 更新说明\n\n- 修复 Stripchat 弹幕反复重连：修正 Centrifugo 心跳协议（被动 pong，不主动发 ping）",
+  "version": "1.0.22",
+  "tag": "v1.0.22",
+  "notes": "## v1.0.22 更新说明\n\n- 修复 Stripchat 部分直播间状态误判为未开播（能观看但显示未开播）",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.21+10021-windows.zip",
-      "msix": "simple_live_app-1.0.21+10021-windows.msix"
+      "zip": "simple_live_app-1.0.22+10022-windows.zip",
+      "msix": "simple_live_app-1.0.22+10022-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.21"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.22"
 }
