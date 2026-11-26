@@ -388,11 +388,8 @@ class StripchatSite implements LiveSite {
     final streamName = _resolveStreamNameFromState(viewCam, viewCamBase);
     final topic = viewCam is Map ? viewCam["topic"]?.toString() : null;
     final avatar = modelMap["avatarUrl"]?.toString() ?? "";
-    // 部分直播间（如冷门/新结构页面）model.isLive 缺失或为 false，
-    // 但有 streamName 且能正常播放（用户实测场景）。
-    // 多路径判断 + streamName 兜底：只要有可用流就认为在播。
-    final isLive = _resolveIsLiveFromState(state, viewCam, modelMap) ||
-        streamName.isNotEmpty;
+    // 多路径判断 isLive；不能用 streamName 兜底——下播后 streamName 常残留旧值。
+    final isLive = _resolveIsLiveFromState(state, viewCam, modelMap);
 
     List<String> presets = const [];
     if (viewCamBase is Map) {
@@ -435,6 +432,10 @@ class StripchatSite implements LiveSite {
   }
 
   /// 多路径判断直播状态（兼容新旧 SSR 结构 + broadcast）。
+  ///
+  /// 关键：明确的下播信号（status=off/idle、showMode=private）优先于
+  /// isLive/streamName——下播后页面常残留 isLive 或 streamName 旧值，
+  /// 不能只看这些字段，否则下播房间会被误判为开播。
   static bool _resolveIsLiveFromState(
     Map<String, dynamic> state,
     dynamic viewCam,
@@ -452,8 +453,45 @@ class StripchatSite implements LiveSite {
     final broadcastItem = asMap(broadcast["item"]) ?? <String, dynamic>{};
     final viewCamBase = asMap(state["viewCamBase"]) ?? <String, dynamic>{};
     final baseModel = asMap(viewCamBase["model"]) ?? <String, dynamic>{};
+    final show = asMap(cam["show"]) ?? <String, dynamic>{};
 
-    // 任一路径为 true 即视为在播。
+    // 1) 明确下播状态：优先判定。
+    final statuses = [
+      modelMap["status"],
+      model["status"],
+      camUserInner["status"],
+      camUser["status"],
+      cam["status"],
+      vc["status"],
+      broadcastItem["status"],
+      broadcast["status"],
+      viewCamBase["status"],
+      state["status"],
+    ];
+    for (final value in statuses) {
+      final status = value?.toString().trim().toLowerCase() ?? '';
+      if (status == 'off' || status == 'idle' || status == 'private' ||
+          status == 'p2p' || status == 'spy') {
+        return false;
+      }
+    }
+    final showMode = show["mode"]?.toString().trim().toLowerCase() ?? '';
+    if (showMode == 'private' || showMode == 'virtualprivate' ||
+        showMode == 'spy') {
+      return false;
+    }
+
+    // 2) 活跃的公开 broadcast（broadcast.status=public + 有效 streamName）。
+    //    这是"正在对外播放"的最可靠信号。
+    final broadcastStatus =
+        broadcastItem["status"]?.toString().trim().toLowerCase() ?? '';
+    final broadcastStreamName =
+        broadcastItem["streamName"]?.toString().trim() ?? '';
+    if (broadcastStatus == 'public' && broadcastStreamName.isNotEmpty) {
+      return true;
+    }
+
+    // 3) 明确的 isLive 信号（任一路径为 true）。
     for (final value in [
       modelMap["isLive"],
       model["isLive"],
@@ -713,9 +751,7 @@ class StripchatSite implements LiveSite {
         if (viewCam is Map && viewCam["isModelNotFounded"] != true) {
           final model = viewCam["model"];
           final modelMap = model is Map ? model : <dynamic, dynamic>{};
-          final streamName = _resolveStreamNameFromState(viewCam, state["viewCamBase"]);
-          return _resolveIsLiveFromState(state, viewCam, modelMap) ||
-              streamName.isNotEmpty;
+          return _resolveIsLiveFromState(state, viewCam, modelMap);
         }
       }
     } catch (_) {
