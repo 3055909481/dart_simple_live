@@ -1,13 +1,13 @@
 {
-  "version": "1.0.19",
-  "tag": "v1.0.19",
-  "notes": "## v1.0.19 更新说明\n\n- 修复 Bigo Live 有弹幕但无直播画面：新增本地代理还原被混淆的 HLS 分片",
+  "version": "1.0.20",
+  "tag": "v1.0.20",
+  "notes": "## v1.0.20 更新说明\n\n- 新增 Stripchat 弹幕支持（此前返回空实现）\n- 新增按直播间记忆音量：可在播放设置开启，每个直播间单独保存音量",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.19+10019-windows.zip",
-      "msix": "simple_live_app-1.0.19+10019-windows.msix"
+      "zip": "simple_live_app-1.0.20+10020-windows.zip",
+      "msix": "simple_live_app-1.0.20+10020-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.19"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.20"
 }
