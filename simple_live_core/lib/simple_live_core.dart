@@ -37,6 +37,7 @@ export 'src/danmaku/huya_danmaku.dart';
 export 'src/danmaku/douyin_danmaku.dart';
 export 'src/danmaku/kuaishou_danmaku.dart';
 export 'src/danmaku/bigo_danmaku.dart';
+export 'src/danmaku/stripchat_danmaku.dart';
 
 export 'src/model/live_category_result.dart';
 export 'src/model/live_contribution_rank.dart';

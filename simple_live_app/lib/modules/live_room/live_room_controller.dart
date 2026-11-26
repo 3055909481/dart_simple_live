@@ -4271,6 +4271,9 @@ class LiveRoomController extends PlayerController
         await _waitForPlayerReopen();
         if (hasCreatedPlayer) await player.stop();
 
+        // 应用新房间的记忆音量（若开启按房间记忆）
+        applyRoomVolume();
+
         // 重新拉取房间信息
         loadData();
 

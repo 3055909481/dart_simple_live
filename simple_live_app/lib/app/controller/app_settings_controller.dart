@@ -300,6 +300,11 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kPlayerVolume,
       100.0,
     );
+    roomVolumeEnable.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kRoomVolumeEnable,
+      false,
+    );
+    _loadRoomVolumes();
     volumeBoostEnable.value = LocalStorageService.instance.getValue(
       LocalStorageService.kVolumeBoostEnable,
       false,
@@ -2691,6 +2696,58 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kPlayerVolume,
       value,
     );
+  }
+
+  /// 按直播间记忆音量（默认关闭，用户可在播放设置开启）。
+  Rx<bool> roomVolumeEnable = false.obs;
+  void setRoomVolumeEnable(bool value) {
+    roomVolumeEnable.value = value;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kRoomVolumeEnable,
+      value,
+    );
+  }
+
+  final RxMap<String, double> roomVolumes = <String, double>{}.obs;
+
+  void _loadRoomVolumes() {
+    final raw = LocalStorageService.instance.getValue(
+      LocalStorageService.kRoomVolumes,
+      "",
+    );
+    if (raw is! String || raw.isEmpty) return;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        roomVolumes.value = {
+          for (final entry in decoded.entries)
+            if (entry.key is String && entry.value is num)
+              entry.key as String: (entry.value as num).toDouble(),
+        };
+      }
+    } catch (_) {}
+  }
+
+  void _saveRoomVolumes() {
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kRoomVolumes,
+      jsonEncode(roomVolumes),
+    );
+  }
+
+  /// 读取指定房间的音量；未记录时回退全局音量。
+  double getRoomVolume(String key) {
+    if (!roomVolumeEnable.value || key.isEmpty) {
+      return playerVolume.value;
+    }
+    return roomVolumes[key] ?? playerVolume.value;
+  }
+
+  /// 保存指定房间的音量。
+  void setRoomVolume(String key, double value) {
+    if (!roomVolumeEnable.value || key.isEmpty) return;
+    roomVolumes[key] = value;
+    _saveRoomVolumes();
   }
 
   /// 音量增强开关：开启后音量上限扩展至 300%，>100 为播放器软件增益（讨论 #161）。

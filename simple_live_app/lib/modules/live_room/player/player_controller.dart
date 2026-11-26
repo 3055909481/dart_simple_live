@@ -23,6 +23,7 @@ import 'package:simple_live_app/app/mpv_exit_helper.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/services/audio_device_service.dart';
 import 'package:simple_live_app/services/background_playback_service.dart';
+import 'package:simple_live_app/services/current_room_service.dart';
 import 'package:simple_live_app/services/ios_video_output_size.dart';
 import 'package:simple_live_app/services/mpv_options_service.dart';
 import 'package:simple_live_app/services/player_resource_lifecycle.dart';
@@ -1131,6 +1132,10 @@ mixin PlayerSystemMixin on PlayerMixin, PlayerStateMixin, PlayerDanmakuMixin {
     }
     if (persist) {
       AppSettingsController.instance.setPlayerVolume(requestedValue);
+      final roomKey = CurrentRoomService.instance.currentKey;
+      if (roomKey.isNotEmpty) {
+        AppSettingsController.instance.setRoomVolume(roomKey, requestedValue);
+      }
     }
   }
 
@@ -2838,13 +2843,17 @@ class PlayerController extends BaseController
   }
 
   double _resolvedPlayerVolume() {
+    final roomKey = CurrentRoomService.instance.currentKey;
     return PlayerVolumePolicy.internalVolume(
       mobile: Platform.isAndroid || Platform.isIOS,
       muted: mutedState.value,
-      persisted: AppSettingsController.instance.playerVolume.value,
+      persisted: AppSettingsController.instance.getRoomVolume(roomKey),
       boostEnabled: AppSettingsController.instance.volumeBoostEnable.value,
     );
   }
+
+  /// 供切房时显式调用：按当前房间重新应用音量。
+  Future<void> applyRoomVolume() => _applyResolvedPlayerVolume();
 
   Future<void> _applyResolvedPlayerVolume() async {
     if (_playerClosing) {

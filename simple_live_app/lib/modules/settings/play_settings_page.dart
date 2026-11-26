@@ -320,6 +320,21 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                     onChanged: controller.setVolumeBoostEnable,
                   ),
                 ),
+                Obx(
+                  () => SettingsSwitch(
+                    title: "按直播间记忆音量",
+                    subtitle:
+                        "开启后每个直播间单独记住音量，切换房间时自动恢复该房间上次的音量",
+                    value: controller.roomVolumeEnable.value,
+                    onChanged: (value) {
+                      controller.setRoomVolumeEnable(value);
+                      // 关闭时把当前音量同步到全局，避免下次使用旧值
+                      if (!value) {
+                        controller.setPlayerVolume(controller.playerVolume.value);
+                      }
+                    },
+                  ),
+                ),
               ],
             ),
           ),

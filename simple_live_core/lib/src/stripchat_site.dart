@@ -5,6 +5,7 @@ import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/common/platform_identity.dart';
 import 'package:simple_live_core/src/common/stripchat_mouflon.dart';
 import 'package:simple_live_core/src/common/stripchat_proxy.dart';
+import 'package:simple_live_core/src/danmaku/stripchat_danmaku.dart';
 import 'package:simple_live_core/src/stripchat_categories.dart';
 
 /// Stripchat 站点实现。
@@ -60,7 +61,7 @@ class StripchatSite implements LiveSite {
   String name = "Stripchat";
 
   @override
-  LiveDanmaku getDanmaku() => LiveDanmaku();
+  LiveDanmaku getDanmaku() => StripchatDanmaku();
 
   Future<dynamic> _getJson(
     String path, {
@@ -230,6 +231,14 @@ class StripchatSite implements LiveSite {
 
   @override
   Future<LiveRoomDetail> getRoomDetail({required String roomId}) async {
+    // 弹幕令牌（一次获取，两个构造路径共用）。失败不影响播放。
+    Map<String, String>? wsToken;
+    try {
+      wsToken = await _fetchDanmakuToken();
+    } catch (_) {
+      wsToken = null;
+    }
+
     // 优先解析模型主页内嵌的 SSR 状态：一次请求即可拿到用户名、头像、
     // 直播状态、streamName 与清晰度，且不受列表接口的 limit 上限影响。
     final html = await _getText("/$roomId");
@@ -237,16 +246,53 @@ class StripchatSite implements LiveSite {
     if (state != null) {
       final viewCam = state["viewCam"];
       if (viewCam is Map && viewCam["isModelNotFounded"] != true) {
-        return _detailFromPageState(state, roomId);
+        return _detailFromPageState(state, roomId, wsToken);
       }
     }
 
     // 页面结构变更时，退回到列表接口按 username 查找。
     final cached = await _findModelInList(roomId);
     if (cached != null) {
-      return _detailFromModel(cached);
+      return _detailFromModel(cached, wsToken);
     }
     throw CoreError("Stripchat 房间数据解析失败，请稍后重试");
+  }
+
+  /// 组装弹幕参数；token/modelId 缺失时返回 null（静默降级）。
+  StripchatDanmakuArgs? _danmakuArgs(
+    String modelId,
+    String roomUrl,
+    Map<String, String>? wsToken,
+  ) {
+    if (modelId.isEmpty ||
+        wsToken == null ||
+        (wsToken['url'] ?? '').isEmpty ||
+        (wsToken['token'] ?? '').isEmpty) {
+      return null;
+    }
+    return StripchatDanmakuArgs(
+      modelId: modelId,
+      websocketUrl: wsToken['url']!,
+      token: wsToken['token']!,
+      roomUrl: roomUrl,
+    );
+  }
+
+  /// 从 initial-dynamic 接口获取 WebSocket JWT/URL。
+  Future<Map<String, String>?> _fetchDanmakuToken() async {
+    final result = await _getJson(
+      "/api/front/v3/config/initial-dynamic",
+      queryParameters: {'requestPath': '/'},
+    );
+    if (result is! Map) return null;
+    final dynamicState = result["initialDynamic"];
+    if (dynamicState is! Map) return null;
+    final ws = dynamicState["websocket"];
+    if (ws is! Map) return null;
+    return {
+      'url': ws["url"]?.toString() ?? '',
+      'token': ws["token"]?.toString() ?? '',
+    };
   }
 
   /// 在若干页列表数据中查找指定 username，并缓存结果供详情/状态复用。
@@ -288,8 +334,12 @@ class StripchatSite implements LiveSite {
     return null;
   }
 
-  LiveRoomDetail _detailFromModel(Map<String, dynamic> model) {
+  LiveRoomDetail _detailFromModel(
+    Map<String, dynamic> model,
+    Map<String, String>? wsToken,
+  ) {
     final username = model["username"]?.toString() ?? "";
+    final modelId = model["id"]?.toString() ?? "";
     final streamName = _resolveStreamName(model);
     final isLive = model["isLive"] == true || model["isOnline"] == true;
     final presets = _parsePresets(model["presets"]);
@@ -317,11 +367,17 @@ class StripchatSite implements LiveSite {
         streamName: streamName,
         presets: presets,
         hlsPlaylist: model["hlsPlaylist"]?.toString(),
+        modelId: modelId,
       ),
+      danmakuData: _danmakuArgs(modelId, "$_baseUrl/$username", wsToken),
     );
   }
 
-  LiveRoomDetail _detailFromPageState(Map<String, dynamic> state, String roomId) {
+  LiveRoomDetail _detailFromPageState(
+    Map<String, dynamic> state,
+    String roomId,
+    Map<String, String>? wsToken,
+  ) {
     final viewCam = state["viewCam"];
     final viewCamBase = state["viewCamBase"];
     final model = viewCam is Map ? viewCam["model"] : null;
@@ -354,8 +410,45 @@ class StripchatSite implements LiveSite {
       data: StripchatRoomData(
         streamName: streamName,
         presets: presets,
+        modelId: _extractModelId(state, roomId),
+      ),
+      danmakuData: _danmakuArgs(
+        _extractModelId(state, roomId),
+        "$_baseUrl/$username",
+        wsToken,
       ),
     );
+  }
+
+  /// 从 SSR 状态里提取主播数字 ID（兼容新旧页面结构）。
+  static String _extractModelId(Map<String, dynamic> state, String roomId) {
+    Map<String, dynamic>? asMap(Object? value) =>
+        value is Map ? Map<String, dynamic>.from(value) : null;
+
+    final viewCam = asMap(state["viewCam"]) ?? <String, dynamic>{};
+    final viewCamBase = asMap(state["viewCamBase"]) ?? <String, dynamic>{};
+    final model = asMap(viewCam["model"]) ?? <String, dynamic>{};
+    final cam = asMap(viewCam["cam"]) ?? <String, dynamic>{};
+    final camUser = asMap(cam["user"]) ?? <String, dynamic>{};
+    final camUserInner = asMap(camUser["user"]) ?? <String, dynamic>{};
+
+    final candidates = <Object?>[
+      viewCamBase["modelId"],
+      viewCam["modelId"],
+      viewCam["userId"],
+      model["id"],
+      model["modelId"],
+      camUserInner["id"],
+      camUser["id"],
+    ];
+    for (final value in candidates) {
+      if (value == null) continue;
+      final text = value.toString();
+      if (text.isNotEmpty && text != '0' && RegExp(r'^\d+$').hasMatch(text)) {
+        return text;
+      }
+    }
+    return "";
   }
 
   /// 提取页面内嵌的 window.__PRELOADED_STATE__ JSON。
@@ -701,10 +794,14 @@ class StripchatRoomData {
   final List<String> presets;
   final String? hlsPlaylist;
 
+  /// 主播数字 ID（弹幕订阅频道需要）。
+  final String modelId;
+
   StripchatRoomData({
     required this.streamName,
     this.presets = const [],
     this.hlsPlaylist,
+    this.modelId = "",
   });
 
   @override
@@ -713,6 +810,7 @@ class StripchatRoomData {
       "streamName": streamName,
       "presets": presets,
       "hlsPlaylist": hlsPlaylist,
+      "modelId": modelId,
     });
   }
 }

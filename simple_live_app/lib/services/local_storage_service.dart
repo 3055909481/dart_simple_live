@@ -133,6 +133,8 @@ class LocalStorageService extends GetxService {
       "LiveEventFlowDisplaySeconds";
   static const String kLiveEventFlowMinCount = "LiveEventFlowMinCount";
   static const String kPlayerVolume = "PlayerVolume";
+  static const String kRoomVolumes = "RoomVolumes";
+  static const String kRoomVolumeEnable = "RoomVolumeEnable";
   static const String kVolumeBoostEnable = "VolumeBoostEnable";
   static const String kPIPHideDanmu = "PIPHideDanmu";
   static const String kPIPHideDanmuDefaultMigrated =
