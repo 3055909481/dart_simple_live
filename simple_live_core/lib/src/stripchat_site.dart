@@ -703,6 +703,24 @@ class StripchatSite implements LiveSite {
 
   @override
   Future<bool> getLiveStatus({required String roomId}) async {
+    // 不能依赖列表查找：冷门房间（如 perfectt33n）不在公开列表前几页，
+    // 会被误判为未开播。直接请求房间页 SSR 状态，与详情页同源。
+    try {
+      final html = await _getText("/$roomId");
+      final state = _extractPreloadedState(html);
+      if (state != null) {
+        final viewCam = state["viewCam"];
+        if (viewCam is Map && viewCam["isModelNotFounded"] != true) {
+          final model = viewCam["model"];
+          final modelMap = model is Map ? model : <dynamic, dynamic>{};
+          final streamName = _resolveStreamNameFromState(viewCam, state["viewCamBase"]);
+          return _resolveIsLiveFromState(state, viewCam, modelMap) ||
+              streamName.isNotEmpty;
+        }
+      }
+    } catch (_) {
+      // 页面请求失败时回退列表查找
+    }
     final model = await _findModelInList(roomId);
     if (model == null) {
       return false;
