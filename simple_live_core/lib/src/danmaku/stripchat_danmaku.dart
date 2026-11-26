@@ -31,10 +31,13 @@ class StripchatDanmakuArgs {
 /// Stripchat 弹幕（Centrifugo WebSocket 协议）。
 ///
 /// 连接后发 connect 帧，ack 后订阅 newChatMessage@<modelId>，
-/// 收到的 push 即聊天消息。心跳为空 JSON 对象 `{}`。
+/// 收到的 push 即聊天消息。
+/// 心跳：服务端每 25 秒发 `{}`（ping），客户端必须回 `{}`（pong）；
+/// 主动定时发 `{}` 会被服务端以 3501 bad request 断开。
 class StripchatDanmaku implements LiveDanmaku {
   @override
-  int heartbeatTime = 10 * 1000;
+  // 禁用框架主动心跳：Centrifugo 只接受被动 pong。
+  int heartbeatTime = 24 * 60 * 60 * 1000;
 
   @override
   Function(LiveMessage msg)? onMessage;
@@ -79,7 +82,8 @@ class StripchatDanmaku implements LiveDanmaku {
         // 连接建立后发 connect 帧（id=1）
         _sendConnect(args.token);
       },
-      onHeartBeat: () => _sendLine('{}'),
+      // Centrifugo 不接受主动 {}，只响应服务端 ping（见 _handleLine）。
+      onHeartBeat: () {},
       onReconnect: () {
         onClose?.call('与 Stripchat 弹幕服务器断开，正在重连');
         _connected = false;
@@ -118,8 +122,12 @@ class StripchatDanmaku implements LiveDanmaku {
       return;
     }
 
-    // connect/subscribe 的 ack
-    if (msg.containsKey('result') || msg.containsKey('connect')) {
+    // connect/subscribe 的 ack：
+    // connect ack = {"id":1,"connect":{...}}
+    // subscribe ack = {"id":2,"subscribe":{}}
+    if (msg.containsKey('result') ||
+        msg.containsKey('connect') ||
+        msg.containsKey('subscribe')) {
       final id = msg['id'];
       if (id is int && id == 1) {
         // connect ack → 订阅房间频道（id=2）
@@ -202,7 +210,8 @@ class StripchatDanmaku implements LiveDanmaku {
 
   @override
   void heartbeat() {
-    _sendLine('{}');
+    // Centrifugo 的 ping/pong 完全由服务端发起、客户端在 _handleLine 响应，
+    // 这里不主动发送，否则服务端会以 3501 bad request 断开。
   }
 
   @override
