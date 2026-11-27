@@ -1,13 +1,13 @@
 {
-  "version": "1.0.25",
-  "tag": "v1.0.25",
-  "notes": "## v1.0.25 更新说明\n\n- 修复音频输出选择跟随Windows默认设备实际不跟随的问题",
+  "version": "1.0.26",
+  "tag": "v1.0.26",
+  "notes": "## v1.0.26 更新说明\n\n- 修复音频输出跟随Windows默认设备不生效：mpv 切换设备后需 ao-reload 重建音频输出",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.25+10025-windows.zip",
-      "msix": "simple_live_app-1.0.25+10025-windows.msix"
+      "zip": "simple_live_app-1.0.26+10026-windows.zip",
+      "msix": "simple_live_app-1.0.26+10026-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.25"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.26"
 }
