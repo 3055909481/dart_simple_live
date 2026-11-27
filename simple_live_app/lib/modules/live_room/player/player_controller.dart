@@ -232,9 +232,11 @@ mixin PlayerMixin {
     // auto 也必须显式下发 "auto"，否则 mpv.conf/高级参数里残留的
     // audio-device=<具体设备> 会继续生效，导致"选了跟随默认却不跟随"。
     if (AudioDeviceService.supported) {
+      // 初始化阶段流尚未打开，AO 会在 open 时按此设备建立，无需 ao-reload。
       await AudioDeviceService.instance.applyToPlayer(
         nativePlayer,
         deviceId: audioDeviceId,
+        reload: false,
       );
     }
     // media_kit 仓库更新导致的问题，临时解决办法
@@ -2287,6 +2289,17 @@ class PlayerController extends BaseController
         loadGeneration: loadGeneration,
         mediaGeneration: mediaGeneration,
         isStillOwner: isStillOwner,
+      );
+    }
+    if (status == PlayerOpenStatus.opened &&
+        AudioDeviceService.supported &&
+        audioDeviceId.isNotEmpty) {
+      // 播放器实例可能被复用，AO 仍停留在旧设备上。open 之后重建一次 AO，
+      // 让 audio-device（含 auto 跟随系统默认）真正生效。
+      await AudioDeviceService.instance.applyToPlayer(
+        player.platform,
+        deviceId: audioDeviceId,
+        reload: true,
       );
     }
     return status == PlayerOpenStatus.opened;

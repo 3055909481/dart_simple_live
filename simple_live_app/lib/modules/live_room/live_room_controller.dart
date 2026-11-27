@@ -3037,14 +3037,12 @@ class LiveRoomController extends PlayerController
         ? service.resolveDeviceId(siteId: site.id, roomId: roomId)
         : picked.id;
     audioDeviceId = resolvedId;
-    try {
-      final platform = player.platform;
-      if (platform is NativePlayer) {
-        await platform.setProperty('audio-device', resolvedId);
-      }
-    } catch (e) {
-      Log.d("切换音频设备失败: $e");
-    }
+    // 正在播放中切换：必须 ao-reload 重建音频输出，否则新设备不生效。
+    await AudioDeviceService.instance.applyToPlayer(
+      player.platform,
+      deviceId: resolvedId,
+      reload: true,
+    );
     SmartDialog.showToast("已切换到：${picked.name}");
   }
 

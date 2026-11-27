@@ -216,17 +216,25 @@ class AudioDeviceService extends GetxService {
     return result;
   }
 
-  /// 将设备应用到播放器。deviceId 为 auto 时清除该属性。
+  /// 将设备应用到播放器。
+  ///
+  /// 关键：mpv 里仅设置 `audio-device` 属性不会重建音频输出（AO），
+  /// 新设备要等 AO 重新初始化才生效。必须再执行 `ao-reload` 命令。
+  /// 否则"跟随系统默认"会一直停留在启动时选定的旧设备上。
   Future<void> applyToPlayer(
     dynamic playerPlatform, {
     required String deviceId,
+    bool reload = true,
   }) async {
     if (!supported) return;
     try {
-      if (deviceId == "auto") {
-        await playerPlatform.setProperty("audio-device", "auto");
-      } else {
-        await playerPlatform.setProperty("audio-device", deviceId);
+      await playerPlatform.setProperty("audio-device", deviceId);
+      if (reload) {
+        // 强制 mpv 销毁并重建 AO，使新的 audio-device 真正生效。
+        // 无播放内容时该命令可能报错，忽略即可。
+        try {
+          await playerPlatform.command(["ao-reload"]);
+        } catch (_) {}
       }
     } catch (e) {
       Log.d("应用音频设备失败: $e");
