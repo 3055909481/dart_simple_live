@@ -1,13 +1,13 @@
 {
-  "version": "1.0.24",
-  "tag": "v1.0.24",
-  "notes": "## v1.0.24 更新说明\n\n- 修复 Stripchat 已下播房间误判为直播中（status 字段优先判断）",
+  "version": "1.0.25",
+  "tag": "v1.0.25",
+  "notes": "## v1.0.25 更新说明\n\n- 修复音频输出选择跟随Windows默认设备实际不跟随的问题",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.24+10024-windows.zip",
-      "msix": "simple_live_app-1.0.24+10024-windows.msix"
+      "zip": "simple_live_app-1.0.25+10025-windows.zip",
+      "msix": "simple_live_app-1.0.25+10025-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.24"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.25"
 }
