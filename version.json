@@ -1,13 +1,13 @@
 {
-  "version": "1.0.26",
-  "tag": "v1.0.26",
-  "notes": "## v1.0.26 更新说明\n\n- 修复音频输出跟随Windows默认设备不生效：mpv 切换设备后需 ao-reload 重建音频输出",
+  "version": "1.0.27",
+  "tag": "v1.0.27",
+  "notes": "## v1.0.27 更新说明\n\n- 修复音频输出设备切换：ao-reload 改在音频输出建立后执行（附诊断日志）",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.26+10026-windows.zip",
-      "msix": "simple_live_app-1.0.26+10026-windows.msix"
+      "zip": "simple_live_app-1.0.27+10027-windows.zip",
+      "msix": "simple_live_app-1.0.27+10027-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.26"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.27"
 }
