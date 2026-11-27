@@ -229,12 +229,16 @@ class AudioDeviceService extends GetxService {
     if (!supported) return;
     try {
       await playerPlatform.setProperty("audio-device", deviceId);
+      Log.d("音频设备已设置: audio-device=$deviceId reload=$reload");
       if (reload) {
         // 强制 mpv 销毁并重建 AO，使新的 audio-device 真正生效。
         // 无播放内容时该命令可能报错，忽略即可。
         try {
           await playerPlatform.command(["ao-reload"]);
-        } catch (_) {}
+          Log.d("音频设备 ao-reload 已执行");
+        } catch (e) {
+          Log.d("音频设备 ao-reload 失败: $e");
+        }
       }
     } catch (e) {
       Log.d("应用音频设备失败: $e");

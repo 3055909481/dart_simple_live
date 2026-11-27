@@ -174,6 +174,10 @@ mixin PlayerMixin {
 
   /// 当前直播间解析出的音频输出设备 ID（由上层在初始化前设置）。
   String audioDeviceId = "auto";
+
+  /// 是否需要在 AO 建立后（playing=true）执行一次 ao-reload 应用新设备。
+  /// ao-reload 打在 AO 建立之前是无效的，必须等播放器真正开始播放。
+  bool _audioDevicePendingReload = false;
   GlobalKey<VideoState> globalPlayerKey = GlobalKey<VideoState>();
   GlobalKey globalDanmuKey = GlobalKey();
 
@@ -2291,16 +2295,10 @@ class PlayerController extends BaseController
         isStillOwner: isStillOwner,
       );
     }
-    if (status == PlayerOpenStatus.opened &&
-        AudioDeviceService.supported &&
-        audioDeviceId.isNotEmpty) {
-      // 播放器实例可能被复用，AO 仍停留在旧设备上。open 之后重建一次 AO，
-      // 让 audio-device（含 auto 跟随系统默认）真正生效。
-      await AudioDeviceService.instance.applyToPlayer(
-        player.platform,
-        deviceId: audioDeviceId,
-        reload: true,
-      );
+    if (status == PlayerOpenStatus.opened && AudioDeviceService.supported) {
+      // open 返回时 AO 尚未建立（实测约 3 秒后才 AO: wasapi）。
+      // 标记待应用，等 playing=true（AO 已建立）时再 ao-reload 才有效。
+      _audioDevicePendingReload = true;
     }
     return status == PlayerOpenStatus.opened;
   }
@@ -2626,6 +2624,15 @@ class PlayerController extends BaseController
         _surfaceRecoveryGraceUntil =
             DateTime.now().add(_surfaceRecoveryGraceDuration);
         unawaited(_applyResolvedPlayerVolume());
+        // AO 已建立：此刻才是 ao-reload 的有效时机，应用待切换的音频设备。
+        if (_audioDevicePendingReload && AudioDeviceService.supported) {
+          _audioDevicePendingReload = false;
+          unawaited(AudioDeviceService.instance.applyToPlayer(
+            player.platform,
+            deviceId: audioDeviceId,
+            reload: true,
+          ));
+        }
         if (listenModeEnabled) {
           // 听直播：重连/刷新/自动切房重新 open 后视频轨可能回到默认，
           // 每次起播都重申禁视频轨；并保持息屏（不持有唤醒锁）
