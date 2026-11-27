@@ -2296,15 +2296,12 @@ class LiveRoomController extends PlayerController
     }
     await initializePlayer();
     // 播放器可能已提前初始化，这里再应用一次确保生效。
-    if (AudioDeviceService.supported && audioDeviceId != "auto") {
-      try {
-        final platform = player.platform;
-        if (platform is NativePlayer) {
-          await platform.setProperty('audio-device', audioDeviceId);
-        }
-      } catch (e) {
-        Log.d("应用音频输出设备失败: $e");
-      }
+    // auto 也要显式下发，覆盖 mpv.conf/高级参数残留的具体设备。
+    if (AudioDeviceService.supported) {
+      await AudioDeviceService.instance.applyToPlayer(
+        player.platform,
+        deviceId: audioDeviceId,
+      );
     }
     if (!_isCurrentLoad(loadGeneration)) {
       return;

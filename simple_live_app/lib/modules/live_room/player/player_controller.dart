@@ -228,13 +228,14 @@ mixin PlayerMixin {
         );
       }
     }
-    // 应用音频输出设备（三级配置解析后的结果）
-    if (AudioDeviceService.supported && audioDeviceId != "auto") {
-      try {
-        await nativePlayer.setProperty('audio-device', audioDeviceId);
-      } catch (e) {
-        Log.d("设置音频输出设备失败: $e");
-      }
+    // 应用音频输出设备（三级配置解析后的结果）。
+    // auto 也必须显式下发 "auto"，否则 mpv.conf/高级参数里残留的
+    // audio-device=<具体设备> 会继续生效，导致"选了跟随默认却不跟随"。
+    if (AudioDeviceService.supported) {
+      await AudioDeviceService.instance.applyToPlayer(
+        nativePlayer,
+        deviceId: audioDeviceId,
+      );
     }
     // media_kit 仓库更新导致的问题，临时解决办法
     if (Platform.isAndroid) {
