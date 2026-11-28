@@ -568,6 +568,20 @@ class DouyuSite implements LiveSite {
     return roomInfo["show_status"] == 1 && roomInfo["videoLoop"] != 1;
   }
 
+  @override
+  Future<LiveTimeInfo?> getLiveTimeInfo({required String roomId}) async {
+    try {
+      var roomInfo = await _getRoomInfo(roomId);
+      final info = LiveTimeInfo(
+        lastLiveAt: int.tryParse(roomInfo["show_time"]?.toString() ?? ""),
+        lastEndAt: int.tryParse(roomInfo["end_time"]?.toString() ?? ""),
+      );
+      return info.isValid ? info : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   int parseHotNum(String hn) {
     try {
       var num = double.parse(hn.replaceAll("万", ""));

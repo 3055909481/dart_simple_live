@@ -470,6 +470,19 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kFollowShowLiveCover,
       false,
     );
+    // 智能降频（默认关闭，避免影响现有行为）
+    smartRefreshEnabled.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kSmartRefreshEnabled,
+      false,
+    );
+    smartRefreshIdleDays.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kSmartRefreshIdleDays,
+      30,
+    );
+    smartRefreshProbeHours.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kSmartRefreshProbeHours,
+      24,
+    );
     // 未手动收起过时默认展开：升级后的老用户仍能看到标签/分组筛选，
     // 用户一旦显式收起，后续启动按持久化值保持折叠。
     followTagPanelExpanded.value = LocalStorageService.instance.getValue(
@@ -2537,6 +2550,41 @@ class AppSettingsController extends GetxController {
   var followRefreshOnEnter = false.obs;
   var followShowLiveCover = false.obs;
   var followTagPanelExpanded = false.obs;
+
+  /// 关注列表智能降频：长期未播的房间降低刷新频率。
+  var smartRefreshEnabled = false.obs;
+
+  /// 未直播超过多少天开始降频。
+  var smartRefreshIdleDays = 30.obs;
+
+  /// 降频后每隔多少小时探活一次。
+  var smartRefreshProbeHours = 24.obs;
+
+  void setSmartRefreshEnabled(bool value) {
+    smartRefreshEnabled.value = value;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kSmartRefreshEnabled,
+      value,
+    );
+  }
+
+  void setSmartRefreshIdleDays(int value) {
+    final normalized = value.clamp(1, 365).toInt();
+    smartRefreshIdleDays.value = normalized;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kSmartRefreshIdleDays,
+      normalized,
+    );
+  }
+
+  void setSmartRefreshProbeHours(int value) {
+    final normalized = value.clamp(1, 168).toInt();
+    smartRefreshProbeHours.value = normalized;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kSmartRefreshProbeHours,
+      normalized,
+    );
+  }
 
   String _normalizeFollowDisplayStyle(String value) {
     if (followDisplayStyleOptions.contains(value)) {

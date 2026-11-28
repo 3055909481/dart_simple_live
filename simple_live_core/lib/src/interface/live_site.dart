@@ -7,6 +7,7 @@ import '../model/live_message.dart';
 import '../model/live_play_url.dart';
 import '../model/live_room_detail.dart';
 import '../model/live_search_result.dart';
+import '../model/live_time_info.dart';
 
 import '../model/live_category.dart';
 import '../model/live_play_quality.dart';
@@ -92,6 +93,14 @@ class LiveSite {
   /// 查询直播状态
   Future<bool> getLiveStatus({required String roomId}) {
     return Future.value(false);
+  }
+
+  /// 读取房间的上次直播时间信息（用于关注列表智能降频）。
+  ///
+  /// 默认返回 null 表示平台不支持；支持的平台（如斗鱼 show_time/end_time、
+  /// 虎牙 iStartTime/iEndTime）可覆盖此方法。时间戳为 Unix 秒。
+  Future<LiveTimeInfo?> getLiveTimeInfo({required String roomId}) {
+    return Future.value(null);
   }
 
   /// 读取指定房间的SC

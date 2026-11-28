@@ -176,6 +176,10 @@ class LocalStorageService extends GetxService {
   static const String kFollowPageSize = "FollowPageSize";
   static const String kFollowRefreshTaskState = "FollowRefreshTaskState";
   static const String kFollowRefreshTaskTargets = "FollowRefreshTaskTargets";
+  // 关注列表智能降频
+  static const String kSmartRefreshEnabled = "SmartRefreshEnabled";
+  static const String kSmartRefreshIdleDays = "SmartRefreshIdleDays";
+  static const String kSmartRefreshProbeHours = "SmartRefreshProbeHours";
   static const String kUserRemarks = "UserRemarks";
   static const String kLastLiveRoom = "LastLiveRoom";
   static const String kLastLiveRoomResumePending = "LastLiveRoomResumePending";

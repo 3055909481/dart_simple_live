@@ -16,7 +16,12 @@ class FollowUser {
       this.isSpecialFollow = false,
       this.roomTitle = "",
       this.roomCover = "",
-      this.previewUpdatedAt});
+      this.previewUpdatedAt,
+      this.lastLiveAt,
+      this.lastEndAt,
+      this.consecutiveOffline = 0,
+      this.lastCheckedAt,
+      this.invalidStrike = 0});
 
   ///id=siteId_roomId
   @HiveField(0)
@@ -52,12 +57,45 @@ class FollowUser {
   @HiveField(10)
   DateTime? previewUpdatedAt;
 
+  /// 上次开播时间（来自服务端，如斗鱼 show_time）。
+  @HiveField(11)
+  DateTime? lastLiveAt;
+
+  /// 上次下播时间（来自服务端，如斗鱼 end_time）。
+  @HiveField(12)
+  DateTime? lastEndAt;
+
+  /// 连续未开播次数（本地累计，用于不支持服务端时间的平台）。
+  @HiveField(13)
+  int consecutiveOffline;
+
+  /// 最后一次成功检查的时间。
+  @HiveField(14)
+  DateTime? lastCheckedAt;
+
+  /// 连续"房间无效/账号注销"次数。
+  @HiveField(15)
+  int invalidStrike;
+
   /// 直播状态
   /// 0=未知(加载中) 1=未开播 2=直播中
   Rx<int> liveStatus = 0.obs;
 
   /// 开播时间戳
   String? liveStartTime;
+
+  static DateTime? _parseTime(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty) return null;
+    // 兼容服务端 Unix 秒/毫秒时间戳
+    final numeric = num.tryParse(text);
+    if (numeric != null && numeric > 0) {
+      final ms = numeric > 100000000000 ? numeric.toInt() : numeric.toInt() * 1000;
+      return DateTime.fromMillisecondsSinceEpoch(ms);
+    }
+    return DateTime.tryParse(text);
+  }
 
   factory FollowUser.fromJson(Map<String, dynamic> json) {
     final roomId = json['roomId']?.toString().trim() ?? "";
@@ -81,6 +119,12 @@ class FollowUser {
       roomCover: json["roomCover"]?.toString() ?? "",
       previewUpdatedAt:
           DateTime.tryParse(json["previewUpdatedAt"]?.toString() ?? ""),
+      lastLiveAt: _parseTime(json["lastLiveAt"]),
+      lastEndAt: _parseTime(json["lastEndAt"]),
+      consecutiveOffline:
+          int.tryParse(json["consecutiveOffline"]?.toString() ?? "") ?? 0,
+      lastCheckedAt: _parseTime(json["lastCheckedAt"]),
+      invalidStrike: int.tryParse(json["invalidStrike"]?.toString() ?? "") ?? 0,
     );
   }
 
@@ -96,5 +140,10 @@ class FollowUser {
         'roomTitle': roomTitle,
         'roomCover': roomCover,
         'previewUpdatedAt': previewUpdatedAt?.toIso8601String() ?? "",
+        'lastLiveAt': lastLiveAt?.toIso8601String() ?? "",
+        'lastEndAt': lastEndAt?.toIso8601String() ?? "",
+        'consecutiveOffline': consecutiveOffline,
+        'lastCheckedAt': lastCheckedAt?.toIso8601String() ?? "",
+        'invalidStrike': invalidStrike,
       };
 }

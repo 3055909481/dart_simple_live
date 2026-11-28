@@ -28,13 +28,18 @@ class FollowUserAdapter extends TypeAdapter<FollowUser> {
       roomTitle: fields[8] as String? ?? "",
       roomCover: fields[9] as String? ?? "",
       previewUpdatedAt: fields[10] as DateTime?,
+      lastLiveAt: fields[11] as DateTime?,
+      lastEndAt: fields[12] as DateTime?,
+      consecutiveOffline: fields[13] as int? ?? 0,
+      lastCheckedAt: fields[14] as DateTime?,
+      invalidStrike: fields[15] as int? ?? 0,
     );
   }
 
   @override
   void write(BinaryWriter writer, FollowUser obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -56,7 +61,17 @@ class FollowUserAdapter extends TypeAdapter<FollowUser> {
       ..writeByte(9)
       ..write(obj.roomCover)
       ..writeByte(10)
-      ..write(obj.previewUpdatedAt);
+      ..write(obj.previewUpdatedAt)
+      ..writeByte(11)
+      ..write(obj.lastLiveAt)
+      ..writeByte(12)
+      ..write(obj.lastEndAt)
+      ..writeByte(13)
+      ..write(obj.consecutiveOffline)
+      ..writeByte(14)
+      ..write(obj.lastCheckedAt)
+      ..writeByte(15)
+      ..write(obj.invalidStrike);
   }
 
   @override

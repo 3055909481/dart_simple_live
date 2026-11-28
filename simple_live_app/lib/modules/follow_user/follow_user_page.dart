@@ -696,6 +696,61 @@ class FollowUserPage extends GetView<FollowUserController> {
                       controller.setRefreshOnEnter(value);
                     },
                   ),
+                  const SizedBox(height: 8),
+                  Obx(() => SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text("智能降频（跳过长期未播房间）"),
+                    subtitle: const Text(
+                      "长期未开播或疑似注销的房间降低刷新频率，缩短刷新耗时；"
+                      "手动刷新和特别关注不受影响",
+                    ),
+                    value: settings.smartRefreshEnabled.value,
+                    onChanged: settings.setSmartRefreshEnabled,
+                  )),
+                  Obx(() => settings.smartRefreshEnabled.value
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text("未直播多少天开始降频"),
+                              subtitle: Text(
+                                "${settings.smartRefreshIdleDays.value} 天",
+                              ),
+                              trailing: SizedBox(
+                                width: 100,
+                                child: TextButton.icon(
+                                  onPressed: () => _showSmartRefreshDaysDialog(
+                                    context,
+                                    settings,
+                                  ),
+                                  icon: const Icon(Icons.edit, size: 16),
+                                  label: const Text("修改"),
+                                ),
+                              ),
+                            ),
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text("降频后探活间隔"),
+                              subtitle: Text(
+                                "每 ${settings.smartRefreshProbeHours.value} 小时刷新一次",
+                              ),
+                              trailing: SizedBox(
+                                width: 100,
+                                child: TextButton.icon(
+                                  onPressed: () =>
+                                      _showSmartRefreshProbeDialog(
+                                    context,
+                                    settings,
+                                  ),
+                                  icon: const Icon(Icons.edit, size: 16),
+                                  label: const Text("修改"),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : const SizedBox.shrink()),
                 ],
               ),
             ),
@@ -1226,6 +1281,78 @@ class FollowUserPage extends GetView<FollowUserController> {
         ),
       ),
     );
+  }
+
+  /// 修改"未直播多少天开始降频"。
+  void _showSmartRefreshDaysDialog(
+    BuildContext context,
+    AppSettingsController settings,
+  ) {
+    final controller = TextEditingController(
+      text: settings.smartRefreshIdleDays.value.toString(),
+    );
+    Get.dialog(
+      AlertDialog(
+        title: const Text("未直播多少天开始降频"),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: "天数（1-365）",
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text("取消")),
+          TextButton(
+            onPressed: () {
+              final value = int.tryParse(controller.text.trim());
+              if (value != null) {
+                settings.setSmartRefreshIdleDays(value);
+              }
+              Get.back();
+            },
+            child: const Text("保存"),
+          ),
+        ],
+      ),
+    ).whenComplete(controller.dispose);
+  }
+
+  /// 修改"降频后探活间隔"。
+  void _showSmartRefreshProbeDialog(
+    BuildContext context,
+    AppSettingsController settings,
+  ) {
+    final controller = TextEditingController(
+      text: settings.smartRefreshProbeHours.value.toString(),
+    );
+    Get.dialog(
+      AlertDialog(
+        title: const Text("降频后探活间隔（小时）"),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: "小时（1-168）",
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text("取消")),
+          TextButton(
+            onPressed: () {
+              final value = int.tryParse(controller.text.trim());
+              if (value != null) {
+                settings.setSmartRefreshProbeHours(value);
+              }
+              Get.back();
+            },
+            child: const Text("保存"),
+          ),
+        ],
+      ),
+    ).whenComplete(controller.dispose);
   }
 }
 

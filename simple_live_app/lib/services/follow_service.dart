@@ -381,13 +381,64 @@ class FollowService extends GetxService {
     );
   }
 
+  /// 智能降频：判断该房间是否跳过本次刷新。
+  /// 返回 true 表示跳过（降频探活未到期）。
+  /// 手动刷新(force=true)或特别关注永不跳过。
+  bool _shouldSkipBySmartRefresh(FollowUser item, {required bool force}) {
+    if (force) return false;
+    final settings = AppSettingsController.instance;
+    if (!settings.smartRefreshEnabled.value) return false;
+    // 特别关注依赖开播通知，不能跳过
+    if (item.isSpecialFollow) return false;
+    // 当前直播中或状态未知，正常刷新
+    if (item.liveStatus.value == 2 || item.liveStatus.value == 0) return false;
+
+    final now = DateTime.now();
+    final lastChecked = item.lastCheckedAt;
+    final probeDuration = Duration(hours: settings.smartRefreshProbeHours.value);
+    final idleDays = settings.smartRefreshIdleDays.value;
+
+    // 依据1：服务端上次直播时间（斗鱼/虎牙等）
+    final lastLive = item.lastLiveAt ?? item.lastEndAt;
+    if (lastLive != null) {
+      final idle = now.difference(lastLive).inDays;
+      if (idle >= idleDays) {
+        // 长期未播：仅按探活频率刷新
+        if (lastChecked != null && now.difference(lastChecked) < probeDuration) {
+          return true;
+        }
+      }
+    }
+
+    // 依据2：本地连续未开播次数（所有平台通用）
+    final offlineThreshold = idleDays * 4; // 按每4小时刷新一次估算
+    if (item.consecutiveOffline >= offlineThreshold) {
+      if (lastChecked != null && now.difference(lastChecked) < probeDuration) {
+        return true;
+      }
+    }
+
+    // 依据3：连续失效（房间不存在/账号注销）→ 降频探活
+    if (item.invalidStrike >= 5 &&
+        lastChecked != null &&
+        now.difference(lastChecked) < probeDuration) {
+      return true;
+    }
+    return false;
+  }
+
   Future<_FollowRefreshItemResult> _updateLiveStatus(
     FollowUser item, {
     int? generation,
     DouyinFollowRefreshLimiter? douyinLimiter,
     int workerIndex = 0,
     bool pauseRemainingOnLimited = false,
+    bool force = false,
   }) async {
+    // 智能降频：到期未到的房间跳过本次刷新
+    if (_shouldSkipBySmartRefresh(item, force: force)) {
+      return const _FollowRefreshItemResult(_FollowRefreshItemOutcome.skipped);
+    }
     final previousStatus = item.liveStatus.value;
     final notifyReady = _liveNotifyReadyIds.contains(item.id);
     try {
@@ -405,6 +456,41 @@ class FollowService extends GetxService {
         douyinLimiter.onSuccess();
       }
       item.liveStatus.value = isLiving ? 2 : 1;
+      // 智能降频统计：记录检查时间、连续未播次数、服务端上次直播时间。
+      // 先保存旧值用于判断是否需要取 timeInfo（避免刚写入后比较永远为0）。
+      final previousCheckedAt = item.lastCheckedAt;
+      final now = DateTime.now();
+      final needTimeInfo =
+          AppSettingsController.instance.smartRefreshEnabled.value &&
+              (item.lastLiveAt == null ||
+                  previousCheckedAt == null ||
+                  now.difference(previousCheckedAt).inHours >= 24);
+      item.lastCheckedAt = now;
+      if (isLiving) {
+        item.consecutiveOffline = 0;
+        item.invalidStrike = 0;
+      } else {
+        item.consecutiveOffline += 1;
+      }
+      if (needTimeInfo) {
+        try {
+          final timeInfo = await site.liveSite.getLiveTimeInfo(
+            roomId: item.roomId,
+          );
+          if (timeInfo != null) {
+            if (timeInfo.lastLiveAt != null) {
+              item.lastLiveAt = DateTime.fromMillisecondsSinceEpoch(
+                timeInfo.lastLiveAt! * 1000,
+              );
+            }
+            if (timeInfo.lastEndAt != null && timeInfo.lastEndAt! > 0) {
+              item.lastEndAt = DateTime.fromMillisecondsSinceEpoch(
+                timeInfo.lastEndAt! * 1000,
+              );
+            }
+          }
+        } catch (_) {}
+      }
       if (item.siteId == Constant.kDouyin) {
         await _reconcileDouyinFollowIdentity(
           item,
@@ -469,6 +555,10 @@ class FollowService extends GetxService {
       }
       item.liveStatus.value = 0;
       item.liveStartTime = null;
+      // 非风控失败累计失效次数（房间不存在/账号注销等）
+      if (!limited) {
+        item.invalidStrike += 1;
+      }
       return _FollowRefreshItemResult(
         _FollowRefreshItemOutcome.failed,
         limited: limited,
@@ -1183,6 +1273,8 @@ class FollowService extends GetxService {
                 douyinLimiter: limiter,
                 workerIndex: workerId,
                 pauseRemainingOnLimited: scope.includeAllNormals,
+                // 手动刷新(force)绕过智能降频
+                force: force,
               );
               if (generation != _updateGeneration) {
                 return;
@@ -1204,7 +1296,10 @@ class FollowService extends GetxService {
                   completed++;
                   break;
                 case _FollowRefreshItemOutcome.deferred:
+                  break;
                 case _FollowRefreshItemOutcome.skipped:
+                  // 跳过的房间也算处理完成，避免进度条卡住
+                  completed++;
                   break;
               }
               if (result.pauseRemaining) {
