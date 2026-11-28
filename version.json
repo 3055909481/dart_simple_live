@@ -1,13 +1,13 @@
 {
-  "version": "1.0.27",
-  "tag": "v1.0.27",
-  "notes": "## v1.0.27 更新说明\n\n- 修复音频输出设备切换：ao-reload 改在音频输出建立后执行（附诊断日志）",
+  "version": "1.0.28",
+  "tag": "v1.0.28",
+  "notes": "## v1.0.28 更新说明\n\n- 新增关注列表智能降频：长期未播/疑似注销房间降低刷新频率，缩短刷新耗时\n- 关注页可开启并设置未播天数阈值、探活间隔；手动刷新与特别关注不受影响\n- 斗鱼/虎牙读取服务端上次直播时间，其他平台用本地未播次数判断",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.27+10027-windows.zip",
-      "msix": "simple_live_app-1.0.27+10027-windows.msix"
+      "zip": "simple_live_app-1.0.28+10028-windows.zip",
+      "msix": "simple_live_app-1.0.28+10028-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.27"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.28"
 }
