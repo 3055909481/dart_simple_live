@@ -381,6 +381,81 @@ class FollowService extends GetxService {
     );
   }
 
+  /// 免登录批量查询前置阶段：B站/Stripchat 一次请求查多个房间。
+  /// 命中的回填状态并从 pendingKeys 移除，未命中/失败的留给逐房间 worker。
+  Future<void> _applyBatchStatusBeforeWorkers({
+    required List<String> pendingKeys,
+    required Map<String, FollowUser> targetByKey,
+    required int generation,
+    required void Function(int) onApplied,
+  }) async {
+    // 按平台分组
+    final bySite = <String, List<FollowUser>>{};
+    for (final key in List<String>.from(pendingKeys)) {
+      final item = targetByKey[key];
+      if (item == null) continue;
+      bySite.putIfAbsent(item.siteId, () => <FollowUser>[]).add(item);
+    }
+
+    var appliedCount = 0;
+    for (final entry in bySite.entries) {
+      if (generation != _updateGeneration) return;
+      final siteId = entry.key;
+      final items = entry.value;
+      Map<String, LiveBatchStatus>? result;
+
+      if (siteId == Constant.kBiliBili) {
+        final site = Sites.allSites[siteId]?.liveSite;
+        if (site is BiliBiliSite) {
+          // 每批 50 个，避免 URL 过长
+          for (int start = 0; start < items.length; start += 50) {
+            final batch = items.skip(start).take(50).toList();
+            final r = await site.batchGetLiveStatus(
+              batch.map((e) => e.roomId).toList(),
+            );
+            if (r == null) break;
+            result ??= {};
+            result.addAll(r);
+          }
+        }
+      } else if (siteId == Constant.kStripchat) {
+        // Stripchat 批量要翻列表页，房间太少时逐个查更快
+        if (items.length >= 5) {
+          final site = Sites.allSites[siteId]?.liveSite;
+          if (site is StripchatSite) {
+            result = await site.batchGetLiveStatus(
+              items.map((e) => e.roomId).toList(),
+            );
+          }
+        }
+      }
+
+      if (result == null || result.isEmpty) continue;
+      for (final item in items) {
+        // B站需匹配 roomId；Stripchat roomId 即用户名
+        final status = result[item.roomId];
+        if (status == null) continue;
+        item.liveStatus.value = status.isLive ? 2 : 1;
+        if (status.isLive) {
+          item.consecutiveOffline = 0;
+          item.invalidStrike = 0;
+          if (status.title != null && status.title!.isNotEmpty) {
+            item.roomTitle = status.title!;
+          }
+        } else {
+          item.consecutiveOffline += 1;
+        }
+        item.lastCheckedAt = DateTime.now();
+        pendingKeys.remove(_refreshTargetKey(item));
+        appliedCount++;
+      }
+    }
+    if (appliedCount > 0) {
+      onApplied(appliedCount);
+      Log.d("批量查询命中 $appliedCount 个房间，跳过逐个刷新");
+    }
+  }
+
   /// 智能降频：判断该房间是否跳过本次刷新。
   /// 返回 true 表示跳过（降频探活未到期）。
   /// 手动刷新(force=true)或特别关注永不跳过。
@@ -1334,6 +1409,21 @@ class FollowService extends GetxService {
           for (var i = 0; i < siteConcurrency; i++) siteWorker(i),
         ];
         await Future.wait(workers);
+      }
+
+      // ===== 免登录批量查询前置阶段（B站/Stripchat） =====
+      // 对支持批量的平台，先一次请求查多个房间状态；命中的直接回填并
+      // 从 pendingKeys 移除，未命中的留给下面的逐房间 worker。
+      if (AppSettingsController.instance.batchQueryEnabled.value) {
+        await _applyBatchStatusBeforeWorkers(
+          pendingKeys: pendingKeys,
+          targetByKey: targetByKey,
+          generation: generation,
+          onApplied: (int n) {
+            successCount += n;
+            completed += n;
+          },
+        );
       }
 
       while (pendingKeys.isNotEmpty) {

@@ -753,6 +753,15 @@ class FollowUserPage extends GetView<FollowUserController> {
                         )
                       : const SizedBox.shrink()),
                   const Divider(),
+                  Obx(() => SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text("批量查询（B站/Stripchat 免登录）"),
+                    subtitle: const Text(
+                      "一次请求查询同平台多个房间状态，缩短刷新耗时；失败会自动逐个重试",
+                    ),
+                    value: settings.batchQueryEnabled.value,
+                    onChanged: settings.setBatchQueryEnabled,
+                  )),
                   Obx(() {
                     final sync = DouyuFollowSyncService.instance;
                     return ListTile(

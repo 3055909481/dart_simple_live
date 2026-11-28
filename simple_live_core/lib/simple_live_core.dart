@@ -47,6 +47,7 @@ export 'src/model/live_room_detail.dart';
 export 'src/model/live_room_item.dart';
 export 'src/model/live_search_result.dart';
 export 'src/model/live_time_info.dart';
+export 'src/model/live_batch_status.dart';
 export 'src/model/live_anchor_item.dart';
 export 'src/model/live_play_url.dart';
 export 'src/model/live_repeated_danmu_summary.dart';

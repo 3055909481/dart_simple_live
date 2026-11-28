@@ -739,6 +739,45 @@ class StripchatSite implements LiveSite {
     return LivePlayUrl(urls: [proxied], headers: requestHeaders);
   }
 
+  /// 免登录批量查询（按用户名）公开 models 列表的状态。
+  ///
+  /// 局限：只覆盖列表内的主播，冷门/离线房间查不到——调用方对未命中的
+  /// roomId 必须回退到逐个 getLiveStatus。
+  Future<Map<String, LiveBatchStatus>?> batchGetLiveStatus(
+    List<String> roomIds,
+  ) async {
+    if (roomIds.isEmpty) return const {};
+    try {
+      final wanted = roomIds.map((e) => e.toLowerCase()).toSet();
+      final out = <String, LiveBatchStatus>{};
+      // 公开列表每页 80，取前 3 页覆盖面尽量大
+      for (int page = 0; page < 3; page++) {
+        final result = await _getJson(
+          "/api/front/models",
+          queryParameters: {"limit": 80, "offset": page * 80},
+        );
+        final models = result is Map ? result["models"] : null;
+        if (models is! List || models.isEmpty) break;
+        for (final item in models) {
+          if (item is! Map) continue;
+          final username = item["username"]?.toString() ?? "";
+          if (username.isEmpty || !wanted.contains(username.toLowerCase())) {
+            continue;
+          }
+          out[username] = LiveBatchStatus(
+            isLive: _parseIsLive(item["isLive"]),
+            title: item["topic"]?.toString(),
+            online: int.tryParse("${item["viewers"] ?? 0}"),
+          );
+        }
+        if (out.length >= wanted.length) break;
+      }
+      return out;
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Future<bool> getLiveStatus({required String roomId}) async {
     // 不能依赖列表查找：冷门房间（如 perfectt33n）不在公开列表前几页，

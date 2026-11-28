@@ -483,6 +483,11 @@ class AppSettingsController extends GetxController {
       LocalStorageService.kSmartRefreshProbeHours,
       24,
     );
+    // 免登录批量查询（B站/Stripchat），默认开启
+    batchQueryEnabled.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kBatchQueryEnabled,
+      true,
+    );
     // 未手动收起过时默认展开：升级后的老用户仍能看到标签/分组筛选，
     // 用户一旦显式收起，后续启动按持久化值保持折叠。
     followTagPanelExpanded.value = LocalStorageService.instance.getValue(
@@ -2559,6 +2564,17 @@ class AppSettingsController extends GetxController {
 
   /// 降频后每隔多少小时探活一次。
   var smartRefreshProbeHours = 24.obs;
+
+  /// 免登录批量查询开关（B站/Stripchat）。
+  var batchQueryEnabled = true.obs;
+
+  void setBatchQueryEnabled(bool value) {
+    batchQueryEnabled.value = value;
+    LocalStorageService.instance.setValue(
+      LocalStorageService.kBatchQueryEnabled,
+      value,
+    );
+  }
 
   void setSmartRefreshEnabled(bool value) {
     smartRefreshEnabled.value = value;

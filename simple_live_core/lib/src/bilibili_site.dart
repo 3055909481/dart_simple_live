@@ -11,6 +11,7 @@ import 'package:simple_live_core/src/danmaku/bilibili_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_site.dart';
 import 'package:simple_live_core/src/model/live_time_info.dart';
+import 'package:simple_live_core/src/model/live_batch_status.dart';
 import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import 'package:simple_live_core/src/model/live_category.dart';
 import 'package:simple_live_core/src/model/live_contribution_rank.dart';
@@ -545,6 +546,50 @@ class BiliBiliSite implements LiveSite {
       header: await getHeader(),
     );
     return (asT<int?>(result["data"]["live_status"]) ?? 0) == 1;
+  }
+
+  /// 免登录批量查询房间状态（按 roomId）。
+  ///
+  /// 接口 getRoomBaseInfo 一次可传多个 room_ids。
+  /// 坑：传短号（如 1）返回 key 是长号（5440），需按 room_id + short_id 双索引回填。
+  Future<Map<String, LiveBatchStatus>?> batchGetLiveStatus(
+    List<String> roomIds,
+  ) async {
+    if (roomIds.isEmpty) return const {};
+    try {
+      final params = <String, dynamic>{
+        "req_biz": "web_room_componet",
+        "room_ids": roomIds,
+      };
+      final result = await HttpClient.instance.getJson(
+        "https://api.live.bilibili.com/xlive/web-room/v1/index/getRoomBaseInfo",
+        queryParameters: params,
+        header: await getHeader(),
+      );
+      final byRoomIds = result is Map
+          ? (result["data"]?["by_room_ids"])
+          : null;
+      if (byRoomIds is! Map) return null;
+
+      final out = <String, LiveBatchStatus>{};
+      byRoomIds.forEach((key, value) {
+        if (value is! Map) return;
+        final status = LiveBatchStatus(
+          isLive: (asT<int?>(value["live_status"]) ?? 0) == 1,
+          title: value["title"]?.toString(),
+          cover: value["cover"]?.toString(),
+          online: asT<int?>(value["online"]),
+        );
+        // 用返回的 room_id 和 short_id 都建立索引
+        final rid = value["room_id"]?.toString() ?? key.toString();
+        final short = value["short_id"]?.toString() ?? "";
+        out[rid] = status;
+        if (short.isNotEmpty && short != "0") out[short] = status;
+      });
+      return out;
+    } catch (e) {
+      return null;
+    }
   }
 
   @override
