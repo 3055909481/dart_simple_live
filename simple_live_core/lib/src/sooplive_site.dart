@@ -166,7 +166,7 @@ class SoopliveSite extends LiveSite {
   }) async {
     if (!detail.status) return const [];
     return [
-      const LivePlayQuality(quality: '直播自动', data: 'auto', sort: 1),
+      LivePlayQuality(quality: '直播自动', data: 'auto', sort: 1),
     ];
   }
 
