@@ -1,13 +1,13 @@
 {
-  "version": "1.0.29",
-  "tag": "v1.0.29",
-  "notes": "## v1.0.29 更新说明\n\n- 新增斗鱼同步关注到账号：手动触发、分钟级限速(45-90秒随机)、单次≤10个、失败即停\n- 附风险提示，抖音因风控原因暂不实现",
+  "version": "1.0.30",
+  "tag": "v1.0.30",
+  "notes": "## v1.0.30 更新说明\n\n- 新增 B站/Stripchat 免登录批量状态查询，缩短关注刷新耗时\n- 关注页可开关批量查询，失败自动逐个回退",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.29+10029-windows.zip",
-      "msix": "simple_live_app-1.0.29+10029-windows.msix"
+      "zip": "simple_live_app-1.0.30+10030-windows.zip",
+      "msix": "simple_live_app-1.0.30+10030-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.29"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.30"
 }
