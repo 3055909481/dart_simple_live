@@ -13,6 +13,7 @@ import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import 'package:simple_live_core/src/model/live_category.dart';
 import 'package:simple_live_core/src/model/live_message.dart';
 import 'package:simple_live_core/src/model/live_play_url.dart';
+import 'package:simple_live_core/src/model/live_time_info.dart';
 import 'package:simple_live_core/src/model/live_contribution_rank.dart';
 import 'package:simple_live_core/src/model/live_room_item.dart';
 import 'package:simple_live_core/src/model/live_search_result.dart';
