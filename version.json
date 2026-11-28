@@ -1,13 +1,13 @@
 {
-  "version": "1.0.34",
-  "tag": "v1.0.34",
-  "notes": "## v1.0.34 更新说明\n\n- 关注页平台筛选下拉框显示所有支持的平台（含 BIGO、SOOP）",
+  "version": "1.0.35",
+  "tag": "v1.0.35",
+  "notes": "## v1.0.35 更新说明\n\n- 修复 SOOP 直播间播放地址获取失败（接口返回 text/html 导致解析异常）",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.34+10034-windows.zip",
-      "msix": "simple_live_app-1.0.34+10034-windows.msix"
+      "zip": "simple_live_app-1.0.35+10035-windows.zip",
+      "msix": "simple_live_app-1.0.35+10035-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.34"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.35"
 }
