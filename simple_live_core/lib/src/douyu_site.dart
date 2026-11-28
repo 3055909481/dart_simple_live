@@ -23,6 +23,14 @@ import 'package:simple_live_core/src/model/live_category_result.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:simple_live_core/src/scripts/douyu_sign.dart';
 
+/// 斗鱼同步关注结果。
+class DouyuFollowResult {
+  final bool success;
+  final String message;
+
+  const DouyuFollowResult(this.success, this.message);
+}
+
 class DouyuSite implements LiveSite {
   /// Optional logged-in Cookie. Anonymous playback remains supported, but
   /// Douyu may cap anonymous high-quality streams after a short period.
@@ -123,6 +131,45 @@ class DouyuSite implements LiveSite {
     'user-agent': PlatformIdentity.douyuUserAgent,
     if (_deviceCookieHeader.isNotEmpty) 'Cookie': _deviceCookieHeader,
   };
+
+  /// 是否已登录斗鱼账号（有 cookie 且有 acf_uid）。
+  bool get isLoggedIn => _cookieValue("acf_uid").isNotEmpty;
+
+  /// 把本地关注的房间关注到斗鱼账号。
+  ///
+  /// 抓包确认：POST /wgapi/livenc/liveweb/follow/add
+  ///   form: rid=<房间号>&ctn=<acf_ccn cookie 值>
+  /// 返回: {"error":0,"msg":"已成功关注直播间！"} 表示成功。
+  /// ctn 是 CSRF token：前端从 cookie acf_ccn 读取；
+  /// 没有时调 /wgapi/livenc/liveweb/csrfApi/getCsrfCookie 获取。
+  Future<DouyuFollowResult> followRoom(String roomId) async {
+    if (!isLoggedIn) {
+      return const DouyuFollowResult(false, "未登录斗鱼账号");
+    }
+    try {
+      await _ensureFreshCookie();
+      var csrf = _cookieValue("acf_ccn");
+      if (csrf.isEmpty) {
+        // cookie 里没有 acf_ccn（csrf token），需重新登录斗鱼刷新 cookie
+        return const DouyuFollowResult(
+            false, "缺少 CSRF token，请重新登录斗鱼账号");
+      }
+      final result = await HttpClient.instance.postJson(
+        "https://www.douyu.com/wgapi/livenc/liveweb/follow/add",
+        data: "rid=$roomId&ctn=$csrf",
+        header: _requestHeaders,
+        formUrlEncoded: true,
+      );
+      final error = result is Map ? result["error"] : null;
+      final msg = result is Map ? result["msg"]?.toString() ?? "" : "";
+      if (error.toString() == "0") {
+        return DouyuFollowResult(true, msg.isNotEmpty ? msg : "已成功关注");
+      }
+      return DouyuFollowResult(false, msg.isNotEmpty ? msg : "关注失败(error=$error)");
+    } catch (e) {
+      return DouyuFollowResult(false, "关注异常: $e");
+    }
+  }
 
   @override
   String id = "douyu";

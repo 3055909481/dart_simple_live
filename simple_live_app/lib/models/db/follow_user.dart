@@ -21,7 +21,8 @@ class FollowUser {
       this.lastEndAt,
       this.consecutiveOffline = 0,
       this.lastCheckedAt,
-      this.invalidStrike = 0});
+      this.invalidStrike = 0,
+      this.douyuSyncedAt});
 
   ///id=siteId_roomId
   @HiveField(0)
@@ -76,6 +77,10 @@ class FollowUser {
   /// 连续"房间无效/账号注销"次数。
   @HiveField(15)
   int invalidStrike;
+
+  /// 已同步到斗鱼账号的时间（用于去重，避免重复关注）。
+  @HiveField(16)
+  DateTime? douyuSyncedAt;
 
   /// 直播状态
   /// 0=未知(加载中) 1=未开播 2=直播中

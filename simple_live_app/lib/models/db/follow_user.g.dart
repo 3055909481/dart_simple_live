@@ -33,13 +33,14 @@ class FollowUserAdapter extends TypeAdapter<FollowUser> {
       consecutiveOffline: fields[13] as int? ?? 0,
       lastCheckedAt: fields[14] as DateTime?,
       invalidStrike: fields[15] as int? ?? 0,
+      douyuSyncedAt: fields[16] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, FollowUser obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(17)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -71,7 +72,9 @@ class FollowUserAdapter extends TypeAdapter<FollowUser> {
       ..writeByte(14)
       ..write(obj.lastCheckedAt)
       ..writeByte(15)
-      ..write(obj.invalidStrike);
+      ..write(obj.invalidStrike)
+      ..writeByte(16)
+      ..write(obj.douyuSyncedAt);
   }
 
   @override

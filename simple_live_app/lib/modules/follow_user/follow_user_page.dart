@@ -12,6 +12,7 @@ import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/modules/follow_user/follow_user_controller.dart';
 import 'package:simple_live_app/services/current_room_service.dart';
+import 'package:simple_live_app/services/douyu_follow_sync_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/widgets/filter_button.dart';
 import 'package:simple_live_app/widgets/hover_preview_wrapper.dart';
@@ -751,6 +752,30 @@ class FollowUserPage extends GetView<FollowUserController> {
                           ],
                         )
                       : const SizedBox.shrink()),
+                  const Divider(),
+                  Obx(() {
+                    final sync = DouyuFollowSyncService.instance;
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.cloud_upload_outlined, size: 20),
+                      title: const Text("同步关注到斗鱼账号"),
+                      subtitle: Text(
+                        sync.isLoggedIn
+                            ? "待同步 ${sync.pendingCount} 个，每次最多 10 个，间隔 45-90 秒"
+                            : "请先登录斗鱼账号",
+                      ),
+                      trailing: sync.syncing.value
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.chevron_right),
+                      onTap: sync.isLoggedIn && !sync.syncing.value
+                          ? () => _confirmDouyuSync(context)
+                          : null,
+                    );
+                  }),
                 ],
               ),
             ),
@@ -1281,6 +1306,23 @@ class FollowUserPage extends GetView<FollowUserController> {
         ),
       ),
     );
+  }
+
+  /// 同步关注到斗鱼账号：风险确认 + 执行。
+  Future<void> _confirmDouyuSync(BuildContext context) async {
+    final sync = DouyuFollowSyncService.instance;
+    final confirmed = await Utils.showAlertDialog(
+      "将把本地关注的斗鱼房间（最多 10 个）关注到你的斗鱼账号。\n\n"
+      '注意：批量关注是高风险操作，斗鱼有"操作频繁导致账号异常"的案例。'
+      "本功能采用分钟级限速（每个间隔 45-90 秒随机），遇失败立即停止。\n\n"
+      "确认继续？",
+      title: "同步关注到斗鱼账号",
+      confirm: "开始同步",
+    );
+    if (!confirmed || !context.mounted) return;
+    final (count, msg) = await sync.syncBatch();
+    if (!context.mounted) return;
+    SmartDialog.showToast(msg);
   }
 
   /// 修改"未直播多少天开始降频"。
