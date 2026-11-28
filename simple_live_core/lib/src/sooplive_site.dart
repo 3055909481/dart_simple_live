@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:simple_live_core/src/common/http_client.dart';
 import 'package:simple_live_core/src/interface/live_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_site.dart';
@@ -207,9 +209,11 @@ class SoopliveSite extends LiveSite {
       if (!cdns.contains(c)) cdns.add(c);
     }
 
+    // 注意：broad_stream_assign.html 返回的 Content-Type 是 text/html，
+    // 不能用 getJson（ResponseType.json 解析会失败），必须用 getText 手动解析。
     for (final cdn in cdns) {
       try {
-        final result = await HttpClient.instance.getJson(
+        final text = await HttpClient.instance.getText(
           '$rmd/broad_stream_assign.html',
           queryParameters: {
             'return_type': cdn,
@@ -217,7 +221,8 @@ class SoopliveSite extends LiveSite {
           },
           header: _headers,
         );
-        final viewUrl = result is Map ? result['view_url']?.toString() : null;
+        final decoded = jsonDecode(text);
+        final viewUrl = decoded is Map ? decoded['view_url']?.toString() : null;
         if (viewUrl == null || viewUrl.isEmpty) continue;
         final sep = viewUrl.contains('?') ? '&' : '?';
         return LivePlayUrl(
