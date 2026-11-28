@@ -1,13 +1,13 @@
 {
-  "version": "1.0.30",
-  "tag": "v1.0.30",
-  "notes": "## v1.0.30 更新说明\n\n- 新增 B站/Stripchat 免登录批量状态查询，缩短关注刷新耗时\n- 关注页可开关批量查询，失败自动逐个回退",
+  "version": "1.0.31",
+  "tag": "v1.0.31",
+  "notes": "## v1.0.31 更新说明\n\n- 新增 SOOP（原 AfreecaTV）平台：免登录看公开直播，支持订阅/19+ 的 Cookie 配置\n- BIGO 图标换成官网官方素材",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.30+10030-windows.zip",
-      "msix": "simple_live_app-1.0.30+10030-windows.msix"
+      "zip": "simple_live_app-1.0.31+10031-windows.zip",
+      "msix": "simple_live_app-1.0.31+10031-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.30"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.31"
 }
