@@ -1619,12 +1619,7 @@ class DouyinSite implements LiveSite {
   }
 
   @override
-  Future<bool> getLiveStatus({required String roomId}
-
-  @override
-  Future<LiveTimeInfo?> getLiveTimeInfo({required String roomId}) {
-    return Future.value(null);
-  }) async {
+  Future<bool> getLiveStatus({required String roomId}) async {
     final targetId = roomId.trim();
     if (targetId.isEmpty) {
       return false;
@@ -1653,6 +1648,11 @@ class DouyinSite implements LiveSite {
       CoreLog.error(e);
       return false;
     }
+  }
+
+  @override
+  Future<LiveTimeInfo?> getLiveTimeInfo({required String roomId}) {
+    return Future.value(null);
   }
 
   Future<bool?> _tryGetLiveStatus(String targetId) async {

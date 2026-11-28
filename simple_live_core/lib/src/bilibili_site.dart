@@ -538,18 +538,18 @@ class BiliBiliSite implements LiveSite {
   }
 
   @override
-  Future<bool> getLiveStatus({required String roomId}
-
-  @override
-  Future<LiveTimeInfo?> getLiveTimeInfo({required String roomId}) {
-    return Future.value(null);
-  }) async {
+  Future<bool> getLiveStatus({required String roomId}) async {
     var result = await HttpClient.instance.getJson(
       "https://api.live.bilibili.com/room/v1/Room/get_info",
       queryParameters: {"room_id": roomId},
       header: await getHeader(),
     );
     return (asT<int?>(result["data"]["live_status"]) ?? 0) == 1;
+  }
+
+  @override
+  Future<LiveTimeInfo?> getLiveTimeInfo({required String roomId}) {
+    return Future.value(null);
   }
 
   @override
