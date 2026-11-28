@@ -79,6 +79,13 @@ class AccountPage extends GetView<AccountController> {
               trailing: const Icon(Icons.chevron_right),
               onTap: controller.stripchatTap,
             )),
+            Obx(() => ListTile(
+              leading: Image.asset('assets/images/sooplive.png', width: 36, height: 36),
+              title: const Text("SOOP"),
+              subtitle: Text(controller.getSoopliveCookieSummaryText()),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: controller.soopliveTap,
+            )),
             const Divider(height: 32),
             const Padding(
               padding: AppStyle.edgeInsetsH12,

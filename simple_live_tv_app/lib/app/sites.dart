@@ -53,6 +53,13 @@ class Sites {
       liveSite: BigoSite(),
       index: 6,
     ),
+    Constant.kSooplive: Site(
+      id: Constant.kSooplive,
+      logo: "assets/images/sooplive.png",
+      name: "SOOP",
+      liveSite: SoopliveSite(),
+      index: 7,
+    ),
   };
 
   static List<Site> get supportSites {

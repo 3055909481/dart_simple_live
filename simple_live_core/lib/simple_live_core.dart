@@ -9,6 +9,7 @@ export 'src/douyin_site.dart';
 export 'src/kuaishou_site.dart';
 export 'src/stripchat_site.dart';
 export 'src/bigo_site.dart';
+export 'src/sooplive_site.dart';
 export 'src/common/core_error.dart';
 export 'src/common/auto_exit_session.dart';
 export 'src/common/core_log.dart';

@@ -321,6 +321,7 @@ class FollowService extends GetxService {
       Constant.kKuaishou,
       Constant.kStripchat,
       Constant.kBigoTv,
+      Constant.kSooplive,
     ];
     final seen = <String>{};
     final result = <String>[];

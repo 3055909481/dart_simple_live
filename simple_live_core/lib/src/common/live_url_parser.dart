@@ -31,6 +31,7 @@ class LiveUrlParser {
   static const String siteKuaishou = "kuaishou";
   static const String siteStripchat = "stripchat";
   static const String siteBigoTv = "bigotv";
+  static const String siteSooplive = "sooplive";
 
   static final RegExp _roomIdPattern = RegExp(r'^[A-Za-z0-9._-]+$');
   static final RegExp _numericRoomIdPattern = RegExp(r'^\d+$');
@@ -167,6 +168,25 @@ class LiveUrlParser {
         return _room(siteBigoTv, seg, uri);
       }
       return null;
+    }
+
+    // SOOP: https://play.sooplive.com/<streamerId> 或
+    //       https://www.sooplive.com/station/<streamerId>
+    if (host == "sooplive.com" ||
+        host.endsWith(".sooplive.com") ||
+        host == "sooplive.co.kr" ||
+        host.endsWith(".sooplive.co.kr") ||
+        host == "afreecatv.com" ||
+        host.endsWith(".afreecatv.com")) {
+      if (segments.isEmpty) return null;
+      // /station/<id> 形式取第二段
+      if (segments.first.toLowerCase() == "station" && segments.length >= 2) {
+        return _room(siteSooplive, segments[1], uri);
+      }
+      // play.sooplive.com/<id> 或 /<id>/<bno> 形式取第一段
+      const reserved = {"play", "station", "www", "m", "api", "vod"};
+      if (reserved.contains(segments.first.toLowerCase())) return null;
+      return _room(siteSooplive, segments.first, uri);
     }
 
     return null;

@@ -4212,6 +4212,10 @@ class LiveRoomController extends PlayerController
       // Bigo 用浏览器打开房间页。
       naviteUrl = detail.value?.url ?? "https://www.bigo.tv/${detail.value?.roomId}";
       webUrl = naviteUrl;
+    } else if (site.id == Constant.kSooplive) {
+      // SOOP 用浏览器打开频道页。
+      naviteUrl = detail.value?.url ?? "https://play.sooplive.com/${detail.value?.roomId}";
+      webUrl = naviteUrl;
     }
     try {
       await launchUrlString(naviteUrl, mode: LaunchMode.externalApplication);

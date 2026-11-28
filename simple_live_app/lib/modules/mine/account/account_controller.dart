@@ -13,6 +13,7 @@ import 'package:simple_live_app/routes/route_path.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/bigo_account_service.dart';
 import 'package:simple_live_app/services/stripchat_account_service.dart';
+import 'package:simple_live_app/services/sooplive_account_service.dart';
 import 'package:simple_live_app/services/douyin_account_service.dart';
 import 'package:simple_live_app/services/douyu_account_service.dart';
 import 'package:simple_live_app/services/kuaishou_account_service.dart';
@@ -919,6 +920,30 @@ class AccountController extends GetxController {
       hint: "粘贴 www.bigo.tv 登录后的完整 Cookie",
       notice: "Bigo 对部分网络出口要求登录才返回播放地址。请在浏览器登录 www.bigo.tv 后，"
           "从开发者工具/抓包工具复制完整 Cookie 粘贴到这里。Cookie 只保存在本机。",
+      currentCookie: account.cookie,
+      hasCookie: account.hasCookie.value,
+      onSave: account.setCookie,
+      onClear: account.clearCookie,
+    );
+  }
+
+  String getSoopliveCookieSummaryText() {
+    final account = SoopliveAccountService.instance;
+    final hasCookie = account.hasCookie.value;
+    final cookie = account.cookie;
+    return !hasCookie || cookie.isEmpty
+        ? "未配置，公开直播无需登录"
+        : "已配置登录 Cookie（${cookie.length} 字符）";
+  }
+
+  void soopliveTap() {
+    final account = SoopliveAccountService.instance;
+    _showSimpleCookieDialog(
+      title: "配置 SOOP Cookie",
+      hint: "粘贴 sooplive.com 登录后的完整 Cookie",
+      notice: "SOOP 公开直播无需登录；订阅专属/19+ 直播需要登录。"
+          "请在浏览器登录 sooplive.com 后复制完整 Cookie 粘贴。"
+          "Cookie 只保存在本机。",
       currentCookie: account.cookie,
       hasCookie: account.hasCookie.value,
       onSave: account.setCookie,

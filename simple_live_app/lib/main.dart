@@ -38,6 +38,7 @@ import 'package:simple_live_app/services/stripchat_account_service.dart';
 import 'package:simple_live_app/services/douyin_account_service.dart';
 import 'package:simple_live_app/services/douyu_account_service.dart';
 import 'package:simple_live_app/services/douyu_follow_sync_service.dart';
+import 'package:simple_live_app/services/sooplive_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:simple_live_app/services/follow_service.dart';
 import 'package:simple_live_app/services/hover_preview_service.dart';
@@ -532,6 +533,7 @@ Future initServices() async {
   Get.put(DouyinAccountService());
   Get.put(DouyuAccountService());
   Get.put(DouyuFollowSyncService());
+  Get.put(SoopliveAccountService());
   Get.put(BigoAccountService());
   Get.put(StripchatAccountService());
 
