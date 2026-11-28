@@ -350,35 +350,17 @@ class FollowUserController extends BasePageController<FollowUser> {
         FollowGroupOption(id: "not_live", title: "未开播", liveStatus: 1),
       ];
 
-  /// 平台筛选选项（当前标签下实际存在的平台）
+  /// 平台筛选选项（显示所有支持的平台，方便切换到任意平台查看/管理）。
   List<FollowGroupOption> get platformGroupOptions {
     final options = <FollowGroupOption>[
       const FollowGroupOption(id: "all", title: "全部"),
     ];
-    final siteIds =
-        _buildSelectedTagList().map((item) => item.siteId).toSet().toList();
-    final siteSort = Sites.supportSites.map((site) => site.id).toList();
-    siteIds.sort((a, b) {
-      final aIndex = siteSort.indexOf(a);
-      final bIndex = siteSort.indexOf(b);
-      if (aIndex < 0 && bIndex < 0) {
-        return a.compareTo(b);
-      }
-      if (aIndex < 0) {
-        return 1;
-      }
-      if (bIndex < 0) {
-        return -1;
-      }
-      return aIndex.compareTo(bIndex);
-    });
-    for (final siteId in siteIds) {
-      final site = Sites.allSites[siteId];
+    for (final site in Sites.supportSites) {
       options.add(
         FollowGroupOption(
-          id: "site:$siteId",
-          title: site?.name ?? siteId,
-          siteId: siteId,
+          id: "site:${site.id}",
+          title: site.name,
+          siteId: site.id,
         ),
       );
     }
