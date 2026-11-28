@@ -1,13 +1,13 @@
 {
-  "version": "1.0.32",
-  "tag": "v1.0.32",
-  "notes": "## v1.0.32 更新说明\n\n- 修复 SOOP 国际版主播（sooplive.com）被误判为未开播的问题\n- 改用新版全球 API 判断状态并直接获取播放地址",
+  "version": "1.0.33",
+  "tag": "v1.0.33",
+  "notes": "## v1.0.33 更新说明\n\n- 修复 SOOP 直播间无法进入：改用官网真实接口，状态判断和播放地址均已实测验证",
   "released": "2026-11-22",
   "assets": {
     "windows": {
-      "zip": "simple_live_app-1.0.32+10032-windows.zip",
-      "msix": "simple_live_app-1.0.32+10032-windows.msix"
+      "zip": "simple_live_app-1.0.33+10033-windows.zip",
+      "msix": "simple_live_app-1.0.33+10033-windows.msix"
     }
   },
-  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.32"
+  "releasePage": "https://github.com/3055909481/dart_simple_live/releases/tag/v1.0.33"
 }
