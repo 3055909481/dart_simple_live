@@ -10,6 +10,7 @@ import 'package:simple_live_core/src/common/platform_identity.dart';
 import 'package:simple_live_core/src/danmaku/bilibili_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_danmaku.dart';
 import 'package:simple_live_core/src/interface/live_site.dart';
+import 'package:simple_live_core/src/model/live_time_info.dart';
 import 'package:simple_live_core/src/model/live_anchor_item.dart';
 import 'package:simple_live_core/src/model/live_category.dart';
 import 'package:simple_live_core/src/model/live_contribution_rank.dart';
@@ -537,7 +538,12 @@ class BiliBiliSite implements LiveSite {
   }
 
   @override
-  Future<bool> getLiveStatus({required String roomId}) async {
+  Future<bool> getLiveStatus({required String roomId}
+
+  @override
+  Future<LiveTimeInfo?> getLiveTimeInfo({required String roomId}) {
+    return Future.value(null);
+  }) async {
     var result = await HttpClient.instance.getJson(
       "https://api.live.bilibili.com/room/v1/Room/get_info",
       queryParameters: {"room_id": roomId},

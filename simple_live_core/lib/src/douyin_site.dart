@@ -1619,7 +1619,12 @@ class DouyinSite implements LiveSite {
   }
 
   @override
-  Future<bool> getLiveStatus({required String roomId}) async {
+  Future<bool> getLiveStatus({required String roomId}
+
+  @override
+  Future<LiveTimeInfo?> getLiveTimeInfo({required String roomId}) {
+    return Future.value(null);
+  }) async {
     final targetId = roomId.trim();
     if (targetId.isEmpty) {
       return false;
